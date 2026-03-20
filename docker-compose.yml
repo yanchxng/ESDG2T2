@@ -1,0 +1,140 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # 1. Infrastructure (Databases & Message Brokers)
+  # ==========================================
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: medilink_rabbitmq
+    ports:
+      - "5672:5672"   # Standard AMQP port
+      - "15672:15672" # RabbitMQ Web UI (localhost:15672)
+    networks:
+      - medilink_net
+
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: medilink_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secretpassword
+    ports:
+      - "5432:5432"
+    networks:
+      - medilink_net
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # ==========================================
+  # 2. Composite Microservices (Your Domain)
+  # ==========================================
+  make-booking-service:
+    build: ./make-booking-service
+    container_name: make_booking_service
+    ports:
+      - "4001:4000" # Maps local 4001 to container's 4000
+    environment:
+      - PATIENT_SERVICE_URL=http://patient-service:5000
+      - DOCTOR_SERVICE_URL=http://doctor-service:5000
+      - CONSULT_SERVICE_URL=http://consult-service:5000
+      - AMQP_URL=amqp://rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    networks:
+      - medilink_net
+
+  consult-doctor-service:
+    build: ./consult-doctor-service
+    container_name: consult_doctor_service
+    ports:
+      - "4002:4000"
+    environment:
+      - PATIENT_SERVICE_URL=http://patient-service:5000
+      - CONSULT_SERVICE_URL=http://consult-service:5000
+      - DIAGNOSIS_SERVICE_URL=http://diagnosis-service:5000
+      - PAYMENT_SERVICE_URL=http://payment-service:5000
+      - AMQP_URL=amqp://rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    networks:
+      - medilink_net
+
+  cancel-booking-service:
+    build: ./cancel-booking-service
+    container_name: cancel_booking_service
+    ports:
+      - "4003:4000"
+    environment:
+      - PATIENT_SERVICE_URL=http://patient-service:5000
+      - DOCTOR_SERVICE_URL=http://doctor-service:5000
+      - CONSULT_SERVICE_URL=http://consult-service:5000
+      - PAYMENT_SERVICE_URL=http://payment-service:5000
+      - AMQP_URL=amqp://rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    networks:
+      - medilink_net
+
+  # ==========================================
+  # 3. Atomic Microservices (Placeholders for your team)
+  # ==========================================
+  patient-service:
+    build: ./patient-service
+    container_name: patient_service
+    ports:
+      - "5001:5000"
+    networks:
+      - medilink_net
+
+  doctor-service:
+    build: ./doctor-service
+    container_name: doctor_service
+    ports:
+      - "5002:5000"
+    networks:
+      - medilink_net
+
+  consult-service:
+    build: ./consult-service
+    container_name: consult_service
+    ports:
+      - "5003:5000"
+    networks:
+      - medilink_net
+
+  diagnosis-service:
+    build: ./diagnosis-service
+    container_name: diagnosis_service
+    ports:
+      - "5004:5000"
+    networks:
+      - medilink_net
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment_service
+    ports:
+      - "5005:5000"
+    networks:
+      - medilink_net
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification_service
+    environment:
+      - AMQP_URL=amqp://rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    networks:
+      - medilink_net
+
+# ==========================================
+# Global Networks and Volumes
+# ==========================================
+networks:
+  medilink_net:
+    driver: bridge
+
+volumes:
+  pgdata:
