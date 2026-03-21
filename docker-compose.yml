@@ -124,6 +124,7 @@ services:
     container_name: notification_service
     environment:
       - AMQP_URL=amqp://rabbitmq:5672
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
     depends_on:
       - rabbitmq
     networks:
