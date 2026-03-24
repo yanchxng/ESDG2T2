@@ -96,12 +96,19 @@ services:
       - medilink_net
 
   consult-service:
-    build: ./consult-service
-    container_name: consult_service
-    ports:
-      - "5003:5000"
-    networks:
-      - medilink_net
+  build: ./consult-service
+  container_name: consult_service
+  ports:
+    - "5003:5000"
+  environment:
+    - DATABASE_URL=postgresql://admin:secretpassword@postgres-db:5432/consultdb
+    - ZOOM_ACCOUNT_ID=${ZOOM_ACCOUNT_ID}
+    - ZOOM_CLIENT_ID=${ZOOM_CLIENT_ID}
+    - ZOOM_CLIENT_SECRET=${ZOOM_CLIENT_SECRET}
+  depends_on:
+    - postgres-db
+  networks:
+    - medilink_net
 
   diagnosis-service:
     build: ./diagnosis-service
