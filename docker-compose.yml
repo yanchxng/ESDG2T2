@@ -96,25 +96,29 @@ services:
       - medilink_net
 
   consult-service:
-  build: ./consult-service
-  container_name: consult_service
-  ports:
-    - "5003:5000"
-  environment:
-    - DATABASE_URL=postgresql://admin:secretpassword@postgres-db:5432/consultdb
-    - ZOOM_ACCOUNT_ID=${ZOOM_ACCOUNT_ID}
-    - ZOOM_CLIENT_ID=${ZOOM_CLIENT_ID}
-    - ZOOM_CLIENT_SECRET=${ZOOM_CLIENT_SECRET}
-  depends_on:
-    - postgres-db
-  networks:
-    - medilink_net
+    build: ./consult-service
+    container_name: consult_service
+    ports:
+      - "5003:5000"
+    environment:
+      - DATABASE_URL=postgresql://admin:secretpassword@postgres-db:5432/consultdb
+      - ZOOM_ACCOUNT_ID=${ZOOM_ACCOUNT_ID}
+      - ZOOM_CLIENT_ID=${ZOOM_CLIENT_ID}
+      - ZOOM_CLIENT_SECRET=${ZOOM_CLIENT_SECRET}
+    depends_on:
+      - postgres-db
+    networks:
+      - medilink_net
 
   diagnosis-service:
     build: ./diagnosis-service
     container_name: diagnosis_service
     ports:
       - "5004:5000"
+    environment:
+      - DATABASE_URL=postgresql://admin:secretpassword@postgres-db:5432/consultdb
+    depends_on:
+      - postgres-db
     networks:
       - medilink_net
 
@@ -123,6 +127,14 @@ services:
     container_name: payment_service
     ports:
       - "5005:5000"
+    environment:
+      - DATABASE_URL=postgresql://admin:secretpassword@postgres-db:5432/consultdb
+      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
+      - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
+      - PAYPAL_CURRENCY=USD
+      - PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
+    depends_on:
+      - postgres-db
     networks:
       - medilink_net
 
