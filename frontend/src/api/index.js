@@ -5,9 +5,9 @@
 export const CONFIG = {
   patientBase: 'https://personal-dzt0acam.outsystemscloud.com/Patient/rest/Patient',
   doctorBase: 'https://personal-dzt0acam.outsystemscloud.com/Doctor/rest/Doctor',
-  consultBase: 'http://localhost:5001',       // Kushala/Lisa — Consult Service
-  bookingBase: 'http://localhost:5002',       // Nigel — Make Booking composite
-  cancelBase: 'http://localhost:5002',       // Nigel — Cancel Booking composite
+  consultBase: 'http://localhost:5003',       // Kushala/Lisa — Consult Service
+  bookingBase: 'http://localhost:4001',       // Nigel — Make Booking composite
+  cancelBase: 'http://localhost:4003',       // Nigel — Cancel Booking composite
   consultDoctorBase: 'http://localhost:5003',       // Nigel — Consult Doctor composite
   diagnosisBase: 'http://localhost:5004',       // Aaliya — Diagnosis Service
   paymentBase: 'http://localhost:5005',       // Aaliya — Payment Service

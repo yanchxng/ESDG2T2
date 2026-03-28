@@ -27,9 +27,9 @@ async def cancel_booking(request: CancelRequest):
     async with httpx.AsyncClient() as client:
         try:
             # 1. GET Patient Details (for notification)
-            patient_res = await client.get(f"{PATIENT_SERVICE_URL}/api/patients/{request.PatientID}")
+            patient_res = await client.get(f"{PATIENT_SERVICE_URL}/patient/{request.PatientID}/")
             patient_res.raise_for_status()
-            patient_data = patient_res.json()
+            patient_data = patient_res.json().get("Data", {})
 
             # 2. GET Consult Details (Need this to know which Doctor and Payment to reverse)
             consult_res = await client.get(f"{CONSULT_SERVICE_URL}/api/consults/{request.ConsultID}")
@@ -41,9 +41,9 @@ async def cancel_booking(request: CancelRequest):
             amount = consult_data.get("amount")
 
             # 3. GET Doctor Details (for notification)
-            doctor_res = await client.get(f"{DOCTOR_SERVICE_URL}/api/doctors/{doctor_id}")
+            doctor_res = await client.get(f"{DOCTOR_SERVICE_URL}/doctor/{doctor_id}/")
             doctor_res.raise_for_status()
-            doctor_data = doctor_res.json()
+            doctor_data = doctor_res.json().get("Data", {})
 
             # 4. POST to Consult Service to delete the Zoom meeting and update DB status
             cancel_consult_payload = {
@@ -71,7 +71,7 @@ async def cancel_booking(request: CancelRequest):
                 
                 # Payload for Patient
                 patient_email_payload = {
-                    "to": patient_data.get("email"),
+                    "to": patient_data.get("Email"),
                     "from": "appointments@medilink.com",
                     "subject": "Cancellation Confirmed & Refund Initiated",
                     "details": f"Hi {patient_data.get('Name')}, your consult ({request.ConsultID}) has been cancelled. A refund of ${amount} has been initiated."
@@ -79,7 +79,7 @@ async def cancel_booking(request: CancelRequest):
                 
                 # Payload for Doctor
                 doctor_email_payload = {
-                    "to": doctor_data.get("email"),
+                    "to": doctor_data.get("Email"),
                     "from": "appointments@medilink.com",
                     "subject": "Appointment Cancelled by Patient",
                     "details": f"Dr. {doctor_data.get('Name')}, please note that your appointment ({request.ConsultID}) has been cancelled by the patient."

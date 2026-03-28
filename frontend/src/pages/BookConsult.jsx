@@ -39,8 +39,6 @@ export default function BookConsult() {
     try {
       await compositeApi.makeBooking({
         PatientID: patient.PatientID,
-        Name: patient.Name,
-        Password: 'placeholder',
         DoctorID: selectedDoctor,
         timeslot,
       })
@@ -90,8 +88,8 @@ export default function BookConsult() {
               </Select>
               {selectedDoctorObj && (
                 <div style={{ marginTop: 4 }}>
-                  <DetailRow label="Name"      value={selectedDoctorObj.Name} />
-                  <DetailRow label="Email"     value={selectedDoctorObj.Email} />
+                  <DetailRow label="Name" value={selectedDoctorObj.Name} />
+                  <DetailRow label="Email" value={selectedDoctorObj.Email} />
                   <DetailRow label="Doctor ID" value={<span style={{ fontFamily: 'monospace', fontSize: 10 }}>{selectedDoctorObj.DoctorID}</span>} />
                 </div>
               )}
@@ -112,9 +110,9 @@ export default function BookConsult() {
         <CardHeader title={<><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 7, background: '#e0f2fe', fontSize: 13, marginRight: 6 }}>✅</span>Step 3 — Confirm Booking</>} />
         {canBook ? (
           <div style={{ marginBottom: 16 }}>
-            <DetailRow label="Doctor"   value={selectedDoctorObj?.Name} />
+            <DetailRow label="Doctor" value={selectedDoctorObj?.Name} />
             <DetailRow label="Timeslot" value={fmtDT(timeslot)} />
-            <DetailRow label="Patient"  value={patient.Name} />
+            <DetailRow label="Patient" value={patient.Name} />
           </div>
         ) : (
           <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 16 }}>Select a doctor and timeslot above to see a summary.</p>

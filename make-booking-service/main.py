@@ -28,14 +28,14 @@ async def make_booking(request: BookingRequest):
     async with httpx.AsyncClient() as client:
         try:
             # Arrows 2 & 3: GET Patient info
-            patient_res = await client.get(f"{PATIENT_SERVICE_URL}/api/patients/{request.PatientID}")
+            patient_res = await client.get(f"{PATIENT_SERVICE_URL}/patient/{request.PatientID}/")
             patient_res.raise_for_status()
-            patient_data = patient_res.json()
+            patient_data = patient_res.json().get("Data", {})
 
             # Arrows 4 & 5: GET Doctor info
-            doctor_res = await client.get(f"{DOCTOR_SERVICE_URL}/api/doctors/{request.DoctorID}", params={"timeslot": request.timeslot})
+            doctor_res = await client.get(f"{DOCTOR_SERVICE_URL}/doctor/{request.DoctorID}/")
             doctor_res.raise_for_status()
-            doctor_data = doctor_res.json()
+            doctor_data = doctor_res.json().get("Data", {})
 
             # Arrows 6-9: POST to Consult Service
             consult_payload = {
@@ -54,10 +54,10 @@ async def make_booking(request: BookingRequest):
                 queue = await channel.declare_queue("email_notifications", durable=True)
                 
                 notification_payload = {
-                    "to": patient_data.get("email"),
+                    "to": patient_data.get("Email"),
                     "from": "appointments@medilink.com",
                     "subject": "Your Teleconsultation is Confirmed",
-                    "details": f"Hello {patient_data.get('Name')}, your consult is booked. Join here: {consult_data.get('url')}"
+                    "details": f"Hello {patient_data.get('Name')}, your consult is booked. Join here: {consult_data.get('url') or consult_data.get('zoom_url', '')}"
                 }
                 
                 await channel.default_exchange.publish(
