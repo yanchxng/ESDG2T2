@@ -57,7 +57,8 @@ async def make_booking(request: BookingRequest):
                     "to": patient_data.get("Email"),
                     "from": "appointments@medilink.com",
                     "subject": "Your Teleconsultation is Confirmed",
-                    "details": f"Hello {patient_data.get('Name')}, your consult is booked. Join here: {consult_data.get('url') or consult_data.get('zoom_url', '')}"
+                    "details": f"Hello {patient_data.get('Name')}, your teleconsultation has been confirmed. Use the link below to join your Zoom session at the scheduled time.",
+                    "zoom_url": consult_data.get("url")
                 }
                 
                 await channel.default_exchange.publish(

@@ -1,3 +1,6 @@
 aio-pika
 sendgrid
 python-dotenv
+fastapi
+uvicorn
+pydantic

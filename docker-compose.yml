@@ -141,6 +141,8 @@ services:
   notification-service:
     build: ./notification-service
     container_name: notification_service
+    ports:
+      - "5006:5000"
     environment:
       - AMQP_URL=amqp://rabbitmq:5672
       - SENDGRID_API_KEY=${SENDGRID_API_KEY}
