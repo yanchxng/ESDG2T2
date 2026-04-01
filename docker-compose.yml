@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   # ==========================================
-  # 1. Infrastructure (Databases & Message Brokers)
+  # 1. Infrastructure 
   # ==========================================
   rabbitmq:
     image: rabbitmq:3-management
@@ -27,16 +27,16 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   # ==========================================
-  # 2. Composite Microservices (Your Domain)
+  # 2. Composite Microservices 
   # ==========================================
   make-booking-service:
     build: ./make-booking-service
     container_name: make_booking_service
     ports:
-      - "4001:4000" # Maps local 4001 to container's 4000
+      - "4001:4000" 
     environment:
-      - PATIENT_SERVICE_URL=http://patient-service:5000
-      - DOCTOR_SERVICE_URL=http://doctor-service:5000
+      - PATIENT_SERVICE_URL=${PATIENT_SERVICE_URL}
+      - DOCTOR_SERVICE_URL=${DOCTOR_SERVICE_URL}
       - CONSULT_SERVICE_URL=http://consult-service:5000
       - AMQP_URL=amqp://rabbitmq:5672
     depends_on:
@@ -50,7 +50,7 @@ services:
     ports:
       - "4002:4000"
     environment:
-      - PATIENT_SERVICE_URL=http://patient-service:5000
+      - PATIENT_SERVICE_URL=${PATIENT_SERVICE_URL}
       - CONSULT_SERVICE_URL=http://consult-service:5000
       - DIAGNOSIS_SERVICE_URL=http://diagnosis-service:5000
       - PAYMENT_SERVICE_URL=http://payment-service:5000
@@ -66,8 +66,8 @@ services:
     ports:
       - "4003:4000"
     environment:
-      - PATIENT_SERVICE_URL=http://patient-service:5000
-      - DOCTOR_SERVICE_URL=http://doctor-service:5000
+      - PATIENT_SERVICE_URL=${PATIENT_SERVICE_URL}
+      - DOCTOR_SERVICE_URL=${DOCTOR_SERVICE_URL}
       - CONSULT_SERVICE_URL=http://consult-service:5000
       - PAYMENT_SERVICE_URL=http://payment-service:5000
       - AMQP_URL=amqp://rabbitmq:5672
@@ -77,31 +77,15 @@ services:
       - medilink_net
 
   # ==========================================
-  # 3. Atomic Microservices (Placeholders for your team)
+  # 3. Atomic Microservices 
   # ==========================================
-  patient-service:
-    build: ./patient-service
-    container_name: patient_service
-    ports:
-      - "5001:5000"
-    networks:
-      - medilink_net
-
-  doctor-service:
-    build: ./doctor-service
-    container_name: doctor_service
-    ports:
-      - "5002:5000"
-    networks:
-      - medilink_net
-
   consult-service:
     build: ./consult-service
     container_name: consult_service
     ports:
       - "5003:5000"
     environment:
-      - DATABASE_URL=postgresql://admin:secretpassword@postgres-db:5432/consultdb
+      - DATABASE_URL=${DATABASE_URL}
       - ZOOM_ACCOUNT_ID=${ZOOM_ACCOUNT_ID}
       - ZOOM_CLIENT_ID=${ZOOM_CLIENT_ID}
       - ZOOM_CLIENT_SECRET=${ZOOM_CLIENT_SECRET}
@@ -116,7 +100,7 @@ services:
     ports:
       - "5004:5000"
     environment:
-      - DATABASE_URL=postgresql://admin:secretpassword@postgres-db:5432/consultdb
+      - DATABASE_URL=${DATABASE_URL}
     depends_on:
       - postgres-db
     networks:
@@ -128,7 +112,7 @@ services:
     ports:
       - "5005:5000"
     environment:
-      - DATABASE_URL=postgresql://admin:secretpassword@postgres-db:5432/consultdb
+      - DATABASE_URL=${DATABASE_URL}
       - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
       - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
       - PAYPAL_CURRENCY=USD

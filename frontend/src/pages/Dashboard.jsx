@@ -85,7 +85,7 @@ export default function Dashboard() {
 
         {/* Profile */}
         <Card>
-          <CardHeader title="My Profile" action={<Button variant="ghost" size="sm" onClick={() => { useAuth().logout && null }}>—</Button>} />
+          <CardHeader title="My Profile" action={<Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>Edit ⚙</Button>} />
           <DetailRow label="Name"        value={patient.Name} />
           <DetailRow label="Email"       value={patient.Email} />
           <DetailRow label="Address"     value={patient.Address} />

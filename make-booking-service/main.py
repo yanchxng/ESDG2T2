@@ -1,12 +1,13 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 import aio_pika
 import json
+import random
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 PATIENT_SERVICE_URL = os.getenv("PATIENT_SERVICE_URL")
@@ -16,10 +17,17 @@ AMQP_URL = os.getenv("AMQP_URL")
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Define the expected JSON payload from the UI
 class BookingRequest(BaseModel):
     PatientID: str
-    DoctorID: str
     timeslot: str
 
 @app.post("/api/booking")
@@ -32,15 +40,42 @@ async def make_booking(request: BookingRequest):
             patient_res.raise_for_status()
             patient_data = patient_res.json().get("Data", {})
 
-            # Arrows 4 & 5: GET Doctor info
-            doctor_res = await client.get(f"{DOCTOR_SERVICE_URL}/doctor/{request.DoctorID}/")
-            doctor_res.raise_for_status()
-            doctor_data = doctor_res.json().get("Data", {})
+            # Fetch all doctors
+            doctors_res = await client.get(f"{DOCTOR_SERVICE_URL}/doctor/")
+            doctors_res.raise_for_status()
+            all_doctors = doctors_res.json().get("Data", [])
+            
+            if not all_doctors:
+                raise HTTPException(status_code=400, detail="No doctors available in the system.")
+            
+            # Shuffle doctors to pick randomly
+            random.shuffle(all_doctors)
+            
+            selected_doctor_id = None
+            date_str = request.timeslot.split("T")[0]
+            
+            # Loop through doctors to find one available for the timeslot
+            for doctor in all_doctors:
+                doc_id = doctor.get("DoctorID")
+                # Check availability in consult service
+                slots_res = await client.get(f"{CONSULT_SERVICE_URL}/api/consults/slots?DoctorID={doc_id}&date={date_str}")
+                if slots_res.status_code == 200:
+                    unavailable = slots_res.json().get("unavailable_slots", [])
+                    # Request.timeslot ends with "Z" or something? Let's assume exact match format comparison
+                    # UI sends: 2026-04-01T15:40. If that string is not in unavailable list, pick them
+                    # Alternatively, if they're not in the unavailable list, pick them.
+                    if request.timeslot not in unavailable and f"{request.timeslot}:00" not in unavailable and f"{request.timeslot}:00Z" not in unavailable:
+                        selected_doctor_id = doc_id
+                        doctor_data = doctor
+                        break
+            
+            if not selected_doctor_id:
+                raise HTTPException(status_code=400, detail="No doctors available for this timeslot.")
 
             # Arrows 6-9: POST to Consult Service
             consult_payload = {
                 "PatientID": request.PatientID,
-                "DoctorID": request.DoctorID,
+                "DoctorID": selected_doctor_id,
                 "timeslot": request.timeslot
             }
             consult_res = await client.post(f"{CONSULT_SERVICE_URL}/api/consults", json=consult_payload)

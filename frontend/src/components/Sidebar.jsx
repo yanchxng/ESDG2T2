@@ -12,6 +12,10 @@ const adminItems = [
   { path: '/admin',        label: 'Admin Panel',     icon: '⚙' },
 ]
 
+const settingsItems = [
+  { path: '/settings',     label: 'Settings',        icon: '⚙' },
+]
+
 export default function Sidebar() {
   const { patient, logout } = useAuth()
   const navigate = useNavigate()
@@ -21,7 +25,7 @@ export default function Sidebar() {
     <aside style={{
       width: 240, background: '#fff', borderRight: '1px solid #e5e7eb',
       display: 'flex', flexDirection: 'column',
-      position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', flexShrink: 0,
+      position: 'sticky', top: 0, height: '100%', overflowY: 'auto', flexShrink: 0,
     }}>
       {/* Logo */}
       <div style={{ padding: '18px 16px 14px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #f3f4f6' }}>
@@ -32,7 +36,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Role toggle (visual) */}
+      {/* Role toggle (visual/state placeholder) */}
       <div style={{ display: 'flex', gap: 4, background: '#f0f4f8', borderRadius: 8, padding: 3, margin: '12px 12px 4px' }}>
         {['👤 Patient', '🏥 Doctor'].map((r, i) => (
           <button key={r} style={{
@@ -52,25 +56,37 @@ export default function Sidebar() {
           <NavItem key={item.path} item={item} active={pathname === item.path} onClick={() => navigate(item.path)} />
         ))}
         <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', margin: '16px 0 10px', padding: '0 4px' }}>System</div>
-        {adminItems.map(item => (
-          <NavItem key={item.path} item={item} active={pathname === item.path} onClick={() => navigate(item.path)} />
-        ))}
+        {patient ? (
+          settingsItems.map(item => (
+            <NavItem key={item.path} item={item} active={pathname === item.path} onClick={() => navigate(item.path)} />
+          ))
+        ) : (
+          adminItems.map(item => (
+            <NavItem key={item.path} item={item} active={pathname === item.path} onClick={() => navigate(item.path)} />
+          ))
+        )}
       </nav>
 
       {/* User footer */}
       <div style={{ padding: 14, borderTop: '1px solid #f3f4f6' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: '#f0f4f8' }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#0ea5e9,#6366f1)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+          <div 
+            onClick={() => { if (patient) navigate('/settings'); }}
+            style={{ cursor: patient ? 'pointer' : 'default', width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#0ea5e9,#6366f1)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
             {patient ? patient.Name[0].toUpperCase() : '?'}
           </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
+          <div 
+            onClick={() => { if (patient) navigate('/settings'); }}
+            style={{ cursor: patient ? 'pointer' : 'default', minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {patient ? patient.Name : 'Not signed in'}
             </div>
             <div style={{ fontSize: 11, color: '#6b7280' }}>Patient</div>
           </div>
           {patient && (
-            <button onClick={logout} title="Sign out" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16, padding: 2 }}>→</button>
+            <button onClick={() => { logout(); navigate('/'); }} title="Sign out" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 18, padding: 2 }}>
+              ⎋
+            </button>
           )}
         </div>
       </div>
