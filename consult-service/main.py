@@ -29,16 +29,16 @@ async def startup():
 class CreateConsultRequest(BaseModel):
     PatientID: str
     DoctorID:  str
-    timeslot:  str  
+    timeslot:  datetime
 
 class ReserveSlotRequest(BaseModel):
     PatientID: str
     DoctorID:  str
-    timeslot:  str
+    timeslot:  datetime
 
 class CancelConsultRequest(BaseModel):
     ConsultID: str
-    action:    str   
+    action:    str
 
 @app.get("/health")
 async def health_check():
@@ -55,6 +55,8 @@ async def get_unavailable_slots(DoctorID: str, date: str):
     """
     conn = await get_db_connection()
     now  = datetime.now(timezone.utc)
+    from datetime import datetime as dt
+    parsed_date = dt.strptime(date, "%Y-%m-%d").date()
     try:
         booked_rows = await conn.fetch(
             """
@@ -63,7 +65,7 @@ async def get_unavailable_slots(DoctorID: str, date: str):
               AND DATE(timeslot) = $2::date
               AND status        != 'cancelled'
             """,
-            DoctorID, date
+            DoctorID, parsed_date
         )
 
         reserved_rows = await conn.fetch(
@@ -73,7 +75,7 @@ async def get_unavailable_slots(DoctorID: str, date: str):
               AND DATE(timeslot) = $2::date
               AND expires_at     > $3
             """,
-            DoctorID, date, now
+            DoctorID, parsed_date, now
         )
 
         booked   = [row["timeslot"].isoformat() for row in booked_rows]
@@ -166,6 +168,28 @@ async def reserve_slot(request: ReserveSlotRequest):
     finally:
         await conn.close()
 
+@app.get("/api/consults/patient/{patient_id}")
+async def get_consults_by_patient(patient_id: str):
+    conn = await get_db_connection()
+    try:
+        rows = await conn.fetch(
+            "SELECT * FROM consultations WHERE patient_id = $1 ORDER BY timeslot DESC", patient_id
+        )
+        return [dict(row) for row in rows]
+    finally:
+        await conn.close()
+
+@app.get("/api/consults/doctor/{doctor_id}")
+async def get_consults_by_doctor(doctor_id: str):
+    conn = await get_db_connection()
+    try:
+        rows = await conn.fetch(
+            "SELECT * FROM consultations WHERE doctor_id = $1 ORDER BY timeslot DESC", doctor_id
+        )
+        return [dict(row) for row in rows]
+    finally:
+        await conn.close()
+
 # Called by Consult Doctor composite (Image 1, step 4)
 # and Cancel Consult composite (Image 2) to fetch consult details.
 @app.get("/api/consults/{consult_id}")
@@ -210,9 +234,9 @@ async def create_consult(request: CreateConsultRequest):
                 detail="This timeslot was just taken. Please select another slot."
             )
 
-        zoom_meeting    = await zoom.create_meeting(
+        zoom_meeting = await zoom.create_meeting(
             topic      = f"MediLink Consultation",
-            start_time = request.timeslot,
+            start_time = request.timeslot.isoformat(),
             duration   = 30
         )
         zoom_meeting_id = str(zoom_meeting["id"])

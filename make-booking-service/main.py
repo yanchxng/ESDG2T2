@@ -109,9 +109,13 @@ async def make_booking(request: BookingRequest):
             }
 
         except httpx.HTTPStatusError as exc:
+            import traceback
+            traceback.print_exc()
             print(f"Error response {exc.response.status_code} while requesting {exc.request.url}")
             raise HTTPException(status_code=500, detail="Failed to process booking request due to internal service error.")
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             print(f"Orchestration Error: {str(e)}")
             raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 

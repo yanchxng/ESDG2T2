@@ -47,26 +47,35 @@ export const doctorApi = {
 
 // ─── CONSULT SERVICE ────────────────────────────────────────
 export const consultApi = {
-  getByPatient: (patientId) => apiFetch(`${CONFIG.consultBase}/consult/patient/${patientId}`),
-  getById: (id) => apiFetch(`${CONFIG.consultBase}/consult/${id}`),
+  getByPatient: (patientId) => apiFetch(`${CONFIG.consultBase}/api/consults/patient/${patientId}`),
+  getByDoctor: (doctorId) => apiFetch(`${CONFIG.consultBase}/api/consults/doctor/${doctorId}`),
+  getById: (id) => apiFetch(`${CONFIG.consultBase}/api/consults/${id}`),
 }
 
 // ─── COMPOSITE SERVICES ─────────────────────────────────────
 export const compositeApi = {
-  makeBooking: (body) => apiFetch(`${CONFIG.bookingBase}/booking`, { method: 'POST', body: JSON.stringify(body) }),
-  cancelBooking: (body) => apiFetch(`${CONFIG.cancelBase}/cancel`, { method: 'POST', body: JSON.stringify(body) }),
+  makeBooking: (body) => apiFetch(`${CONFIG.bookingBase}/api/booking`, { method: 'POST', body: JSON.stringify(body) }),
+  cancelBooking: (body) => apiFetch(`${CONFIG.cancelBase}/api/booking/cancel`, { method: 'POST', body: JSON.stringify(body) }),
   consultDoctor: (body) => apiFetch(`${CONFIG.consultDoctorBase}/consult-doctor`, { method: 'POST', body: JSON.stringify(body) }),
 }
 
 // ─── HELPERS ────────────────────────────────────────────────
 export function fmtDate(d) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-SG', { day: '2-digit', month: 'short', year: 'numeric' })
+  // If it's a simple YYYY-MM-DD string, don't append timezone offset to prevent Invalid Date errors
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    return new Date(d).toLocaleDateString('en-SG', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+  // Strip backend timezone artifacts and force it to be interpreted as Singapore Time
+  const raw = d.replace(/(Z|[+-]\d{2}:\d{2})$/, '') + '+08:00'
+  return new Date(raw).toLocaleDateString('en-SG', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Singapore' })
 }
 
 export function fmtDT(d) {
   if (!d) return '—'
-  return new Date(d).toLocaleString('en-SG', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  // Strip backend timezone artifacts and force it to be interpreted as Singapore Time
+  const raw = d.replace(/(Z|[+-]\d{2}:\d{2})$/, '') + '+08:00'
+  return new Date(raw).toLocaleString('en-SG', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Singapore' })
 }
 
 export function getInitial(name) {

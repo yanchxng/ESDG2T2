@@ -98,10 +98,12 @@ const badgeStyles = {
 }
 
 export function Badge({ status }) {
-  const s = badgeStyles[status] || badgeStyles.default
+  const norm = (status || '').toUpperCase()
+  const display = norm === 'BOOKED' ? 'SCHEDULED' : norm
+  const s = badgeStyles[display] || badgeStyles.default
   return (
     <span style={{ ...s, display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 20, fontSize: 11, fontWeight: 500 }}>
-      {status || '—'}
+      {display || '—'}
     </span>
   )
 }

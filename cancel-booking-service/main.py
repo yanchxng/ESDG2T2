@@ -5,6 +5,7 @@ import aio_pika
 import json
 import os
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 
 # Load environment variables
 load_dotenv()
@@ -16,6 +17,14 @@ PAYMENT_SERVICE_URL = os.getenv("PAYMENT_SERVICE_URL")
 AMQP_URL = os.getenv("AMQP_URL")
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Define the expected JSON payload from the UI
 class CancelRequest(BaseModel):
@@ -35,10 +44,10 @@ async def cancel_booking(request: CancelRequest):
             consult_res = await client.get(f"{CONSULT_SERVICE_URL}/api/consults/{request.ConsultID}")
             consult_res.raise_for_status()
             consult_data = consult_res.json()
-            
-            doctor_id = consult_data.get("DoctorID")
-            payment_id = consult_data.get("PaymentID")
-            amount = consult_data.get("amount")
+
+            doctor_id = consult_data.get("doctor_id") or consult_data.get("DoctorID")
+            payment_id = consult_data.get("payment_id") or consult_data.get("PaymentID")
+            amount = consult_data.get("amount", 0)
 
             # 3. GET Doctor Details (for notification)
             doctor_res = await client.get(f"{DOCTOR_SERVICE_URL}/doctor/{doctor_id}/")

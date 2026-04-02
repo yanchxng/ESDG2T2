@@ -17,7 +17,7 @@ const settingsItems = [
 ]
 
 export default function Sidebar() {
-  const { patient, logout } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
 
@@ -36,54 +36,44 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Role toggle (visual/state placeholder) */}
-      <div style={{ display: 'flex', gap: 4, background: '#f0f4f8', borderRadius: 8, padding: 3, margin: '12px 12px 4px' }}>
-        {['👤 Patient', '🏥 Doctor'].map((r, i) => (
-          <button key={r} style={{
-            flex: 1, padding: '6px 8px', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 500,
-            cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-            color: i === 0 ? '#111827' : '#6b7280',
-            background: i === 0 ? '#fff' : 'transparent',
-            boxShadow: i === 0 ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-          }}>{r}</button>
-        ))}
-      </div>
-
       {/* Nav */}
       <nav style={{ padding: '8px 10px', flex: 1 }}>
         <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 10, padding: '0 4px' }}>Menu</div>
-        {navItems.map(item => (
-          <NavItem key={item.path} item={item} active={pathname === item.path} onClick={() => navigate(item.path)} />
-        ))}
+        {navItems.map(item => {
+          // Hide "Book Consultation" for doctors
+          if (user?.role === 'doctor' && item.path === '/book') return null;
+          return <NavItem key={item.path} item={item} active={pathname === item.path} onClick={() => navigate(item.path)} />
+        })}
         <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', margin: '16px 0 10px', padding: '0 4px' }}>System</div>
-        {patient ? (
-          settingsItems.map(item => (
-            <NavItem key={item.path} item={item} active={pathname === item.path} onClick={() => navigate(item.path)} />
-          ))
-        ) : (
-          adminItems.map(item => (
-            <NavItem key={item.path} item={item} active={pathname === item.path} onClick={() => navigate(item.path)} />
-          ))
-        )}
+        {user ? (
+          <>
+            {user.role === 'doctor' && adminItems.map(item => (
+              <NavItem key={item.path} item={item} active={pathname === item.path} onClick={() => navigate(item.path)} />
+            ))}
+            {settingsItems.map(item => (
+              <NavItem key={item.path} item={item} active={pathname === item.path} onClick={() => navigate(item.path)} />
+            ))}
+          </>
+        ) : null}
       </nav>
 
       {/* User footer */}
       <div style={{ padding: 14, borderTop: '1px solid #f3f4f6' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: '#f0f4f8' }}>
           <div 
-            onClick={() => { if (patient) navigate('/settings'); }}
-            style={{ cursor: patient ? 'pointer' : 'default', width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#0ea5e9,#6366f1)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
-            {patient ? patient.Name[0].toUpperCase() : '?'}
+            onClick={() => { if (user) navigate('/settings'); }}
+            style={{ cursor: user ? 'pointer' : 'default', width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#0ea5e9,#6366f1)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+            {user ? user.Name[0].toUpperCase() : '?'}
           </div>
           <div 
-            onClick={() => { if (patient) navigate('/settings'); }}
-            style={{ cursor: patient ? 'pointer' : 'default', minWidth: 0, flex: 1 }}>
+            onClick={() => { if (user) navigate('/settings'); }}
+            style={{ cursor: user ? 'pointer' : 'default', minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {patient ? patient.Name : 'Not signed in'}
+              {user ? user.Name : 'Not signed in'}
             </div>
-            <div style={{ fontSize: 11, color: '#6b7280' }}>Patient</div>
+            <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'capitalize' }}>{user ? user.role : ''}</div>
           </div>
-          {patient && (
+          {user && (
             <button onClick={() => { logout(); navigate('/'); }} title="Sign out" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 18, padding: 2 }}>
               ⎋
             </button>

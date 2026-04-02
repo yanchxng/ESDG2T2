@@ -57,6 +57,8 @@ async def create_meeting(topic: str, start_time: str, duration: int = 30) -> dic
             },
             headers={"Authorization": f"Bearer {token}"}
         )
+        if not res.is_success:
+            print("Zoom Error:", res.text)
         res.raise_for_status()
         return res.json()
 

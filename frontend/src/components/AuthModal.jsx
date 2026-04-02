@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { Modal, Input, Button } from './UI'
-import { patientApi } from '../api'
+import { patientApi, doctorApi } from '../api'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 
 export default function AuthModal({ open, onClose }) {
   const [mode, setMode] = useState('login') // 'login' | 'register'
+  const [role, setRole] = useState('patient') // 'patient' | 'doctor'
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
   const toast = useToast()
@@ -21,11 +22,12 @@ export default function AuthModal({ open, onClose }) {
     if (!loginForm.email || !loginForm.password) { toast('Please enter email and password', 'error'); return }
     setLoading(true)
     try {
-      const data = await patientApi.getAll()
+      const api = role === 'doctor' ? doctorApi : patientApi
+      const data = await api.getAll()
       const list = data.Data || data.data || []
       const found = list.find(p => p.Email === loginForm.email)
-      if (!found) { toast('No patient found with that email. Please register first.', 'error'); return }
-      login(found)
+      if (!found) { toast(`No ${role} found with that email. Please register first.`, 'error'); return }
+      login(found, role)
       toast(`Welcome back, ${found.Name}!`, 'success')
       onClose()
     } catch (err) {
@@ -38,12 +40,18 @@ export default function AuthModal({ open, onClose }) {
   async function handleRegister(e) {
     e.preventDefault()
     const { name, email, password, dob, address } = regForm
-    if (!name || !email || !password || !dob || !address) { toast('Please fill all fields', 'error'); return }
+    if (!name || !email || !password) { toast('Please fill all required fields', 'error'); return }
+    if (role === 'patient' && (!dob || !address)) { toast('Please fill all fields', 'error'); return }
     setLoading(true)
     try {
-      const data = await patientApi.create({ Name: name, Email: email, Password: password, DOB: dob, Address: address })
-      const p = data.Data || data.data || data
-      login(p)
+      let data, p
+      if (role === 'doctor') {
+        data = await doctorApi.create({ Name: name, Email: email, Password: password })
+      } else {
+        data = await patientApi.create({ Name: name, Email: email, Password: password, DOB: dob, Address: address })
+      }
+      p = data.Data || data.data || data
+      login(p, role)
       toast(`Welcome, ${p.Name}! 🎉`, 'success')
       onClose()
     } catch (err) {
@@ -72,6 +80,21 @@ export default function AuthModal({ open, onClose }) {
         )
       }
     >
+      {/* Role toggle */}
+      <div style={{ display: 'flex', gap: 4, background: '#f0f4f8', borderRadius: 8, padding: 3, marginBottom: 16 }}>
+        {['patient', 'doctor'].map((r) => (
+          <button key={r} onClick={() => setRole(r)} type="button" style={{
+            flex: 1, padding: '8px', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500,
+            cursor: 'pointer', fontFamily: 'Inter, sans-serif', textTransform: 'capitalize',
+            color: role === r ? '#111827' : '#6b7280',
+            background: role === r ? '#fff' : 'transparent',
+            boxShadow: role === r ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+          }}>
+            {r === 'patient' ? '👤 Patient' : '🏥 Doctor'}
+          </button>
+        ))}
+      </div>
+
       {mode === 'login' ? (
         <form onSubmit={handleLogin}>
           <Input label="Email address" type="email" placeholder="you@example.com" value={loginForm.email} onChange={e => setLoginForm(f => ({ ...f, email: e.target.value }))} />
@@ -80,12 +103,16 @@ export default function AuthModal({ open, onClose }) {
       ) : (
         <form onSubmit={handleRegister}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-            <Input label="Full Name" placeholder="Alice Tan" value={regForm.name} onChange={e => setRegForm(f => ({ ...f, name: e.target.value }))} />
-            <Input label="Email" type="email" placeholder="alice@example.com" value={regForm.email} onChange={e => setRegForm(f => ({ ...f, email: e.target.value }))} />
+            <Input label="Full Name" placeholder={role === 'doctor' ? "Dr. John Doe" : "Alice Tan"} value={regForm.name} onChange={e => setRegForm(f => ({ ...f, name: e.target.value }))} />
+            <Input label="Email" type="email" placeholder="email@example.com" value={regForm.email} onChange={e => setRegForm(f => ({ ...f, email: e.target.value }))} />
             <Input label="Password" type="password" placeholder="••••••••" value={regForm.password} onChange={e => setRegForm(f => ({ ...f, password: e.target.value }))} />
-            <Input label="Date of Birth" type="date" value={regForm.dob} onChange={e => setRegForm(f => ({ ...f, dob: e.target.value }))} />
+            {role === 'patient' && (
+              <Input label="Date of Birth" type="date" value={regForm.dob} onChange={e => setRegForm(f => ({ ...f, dob: e.target.value }))} />
+            )}
           </div>
-          <Input label="Address" placeholder="123 Orchard Road, Singapore" value={regForm.address} onChange={e => setRegForm(f => ({ ...f, address: e.target.value }))} />
+          {role === 'patient' && (
+            <Input label="Address" placeholder="123 Orchard Road, Singapore" value={regForm.address} onChange={e => setRegForm(f => ({ ...f, address: e.target.value }))} />
+          )}
         </form>
       )}
     </Modal>

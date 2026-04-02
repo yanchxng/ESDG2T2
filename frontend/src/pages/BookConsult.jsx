@@ -7,7 +7,7 @@ import { Card, CardHeader, Select, Input, Button, LoadingRow, DetailRow } from '
 import AuthModal from '../components/AuthModal'
 
 export default function BookConsult() {
-  const { patient } = useAuth()
+  const { user } = useAuth()
   const toast = useToast()
   const navigate = useNavigate()
   const [authOpen, setAuthOpen] = useState(false)
@@ -45,20 +45,20 @@ export default function BookConsult() {
   const isToday = selectedDate === minDate;
 
   useEffect(() => {
-    if (!patient) return
+    if (!user || user.role !== 'patient') return
     setDoctorsLoading(true)
     doctorApi.getAll()
       .then(data => setDoctors(data.Data || data.data || []))
       .catch(err => toast('Could not load doctors: ' + err.message, 'error'))
       .finally(() => setDoctorsLoading(false))
-  }, [patient])
+  }, [user])
 
   async function handleBook() {
     if (!canBook) return
     setBooking(true)
     try {
       await compositeApi.makeBooking({
-        PatientID: patient.PatientID,
+        PatientID: user.PatientID,
         timeslot,
       })
       toast('Booking confirmed! 🎉 Check your consults.', 'success')
@@ -70,7 +70,7 @@ export default function BookConsult() {
     }
   }
 
-  if (!patient) {
+  if (!user || user.role !== 'patient') {
     return (
       <div className="fade-up">
         <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
@@ -139,7 +139,7 @@ export default function BookConsult() {
           <div style={{ marginBottom: 16 }}>
             <DetailRow label="Doctor" value="To be assigned" />
             <DetailRow label="Timeslot" value={fmtDT(timeslot)} />
-            <DetailRow label="Patient" value={patient.Name} />
+            <DetailRow label="Patient" value={user?.Name || '-'} />
           </div>
         ) : (
           <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 16 }}>Select a timeslot above to see a summary.</p>

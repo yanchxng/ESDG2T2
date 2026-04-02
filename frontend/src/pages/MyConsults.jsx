@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { consultApi, compositeApi, fmtDT } from '../api'
+import { consultApi, compositeApi, doctorApi, fmtDT } from '../api'
 import { Card, Badge, Button, Modal, DetailRow, LoadingRow, EmptyState } from '../components/UI'
 import AuthModal from '../components/AuthModal'
 
 const FILTERS = ['All', 'SCHEDULED', 'COMPLETED', 'CANCELLED']
 
 export default function MyConsults() {
-  const { patient } = useAuth()
+  const { user } = useAuth()
   const toast = useToast()
   const [authOpen, setAuthOpen] = useState(false)
   const [consults, setConsults] = useState([])
@@ -16,25 +16,45 @@ export default function MyConsults() {
   const [filter, setFilter] = useState('All')
   const [selected, setSelected] = useState(null) // consult for detail modal
   const [cancelling, setCancelling] = useState(false)
+  const [doctorsMap, setDoctorsMap] = useState({})
 
   function load() {
-    if (!patient) return
+    if (!user) return
     setLoading(true)
-    consultApi.getByPatient(patient.PatientID)
+    const req = user.role === 'doctor' 
+      ? consultApi.getByDoctor(user.DoctorID) 
+      : consultApi.getByPatient(user.PatientID)
+    req
       .then(data => setConsults(data.Data || data.data || data || []))
       .catch(() => setConsults([]))
       .finally(() => setLoading(false))
+
+    // Preload docs dictionary
+    doctorApi.getAll()
+      .then(res => {
+        const docs = res.Data || res.data || res || []
+        const map = {}
+        docs.forEach(d => {
+          map[d.DoctorID || d.id] = d.Name || d.name || `Dr. ${d.DoctorID}`
+        })
+        setDoctorsMap(map)
+      })
+      .catch(() => {})
   }
 
-  useEffect(() => { load() }, [patient])
+  useEffect(() => { load() }, [user])
 
-  const filtered = filter === 'All' ? consults : consults.filter(c => (c.Status || c.status) === filter)
+  const filtered = filter === 'All' ? consults : consults.filter(c => {
+    const s = (c.Status || c.status || '').toUpperCase()
+    const match = s === 'BOOKED' ? 'SCHEDULED' : s
+    return match === filter
+  })
 
   async function handleCancel(consultId) {
     if (!window.confirm('Are you sure you want to cancel this consultation?')) return
     setCancelling(true)
     try {
-      await compositeApi.cancelBooking({ PatientID: patient.PatientID, ConsultID: consultId })
+      await compositeApi.cancelBooking({ PatientID: user.PatientID || selected?.PatientID, ConsultID: consultId })
       toast('Consultation cancelled. Notification sent.', 'success')
       setSelected(null)
       load()
@@ -50,7 +70,7 @@ export default function MyConsults() {
     }
   }
 
-  if (!patient) {
+  if (!user) {
     return (
       <div className="fade-up">
         <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
@@ -78,7 +98,7 @@ export default function MyConsults() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setSelected(null)}>Close</Button>
-            {selected && (selected.Status || selected.status) === 'SCHEDULED' && (
+            {selected && ((selected.Status || selected.status || '').toUpperCase() === 'SCHEDULED' || (selected.Status || selected.status || '').toUpperCase() === 'BOOKED') && (
               <Button variant="danger" size="sm" disabled={cancelling} onClick={() => handleCancel(selected.ConsultID || selected.consult_id)}>
                 {cancelling ? 'Cancelling…' : 'Cancel Consult'}
               </Button>
@@ -89,7 +109,7 @@ export default function MyConsults() {
         {selected && (
           <>
             <DetailRow label="Consult ID"  value={<span style={{ fontFamily: 'monospace', fontSize: 10 }}>{selected.ConsultID || selected.consult_id}</span>} />
-            <DetailRow label="Doctor ID"   value={<span style={{ fontFamily: 'monospace', fontSize: 10 }}>{selected.DoctorID || selected.doctor_id}</span>} />
+            <DetailRow label="Doctor"      value={doctorsMap[selected.DoctorID || selected.doctor_id] || (selected.DoctorID || selected.doctor_id)} />
             <DetailRow label="Patient ID"  value={<span style={{ fontFamily: 'monospace', fontSize: 10 }}>{selected.PatientID || selected.patient_id}</span>} />
             <DetailRow label="Timeslot"    value={fmtDT(selected.Timeslot || selected.timeslot)} />
             <DetailRow label="Status"      value={<Badge status={selected.Status || selected.status} />} />
@@ -129,15 +149,16 @@ export default function MyConsults() {
         <EmptyState icon="📋" message={`No ${filter === 'All' ? '' : filter.toLowerCase() + ' '}consultations found.`} />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.map(c => <ConsultCard key={c.ConsultID || c.consult_id} c={c} onView={() => setSelected(c)} onCancel={handleCancel} />)}
+          {filtered.map(c => <ConsultCard key={c.ConsultID || c.consult_id} c={c} doctorsMap={doctorsMap} onView={() => setSelected(c)} onCancel={handleCancel} />)}
         </div>
       )}
     </div>
   )
 }
 
-function ConsultCard({ c, onView, onCancel }) {
-  const status = c.Status || c.status
+function ConsultCard({ c, doctorsMap, onView, onCancel }) {
+  const rawStatus = (c.Status || c.status || '').toUpperCase()
+  const status = rawStatus === 'BOOKED' ? 'SCHEDULED' : rawStatus
   const zoom = c.ZoomURL || c.zoom_url
   const id = c.ConsultID || c.consult_id || '—'
   return (
@@ -148,7 +169,7 @@ function ConsultCard({ c, onView, onCancel }) {
       </div>
       <div style={{ fontSize: 12, color: '#6b7280', display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 4 }}>
         <span>📅 {fmtDT(c.Timeslot || c.timeslot)}</span>
-        <span>👨‍⚕️ {(c.DoctorID || c.doctor_id || '—').substring(0, 12)}…</span>
+        <span>👨‍⚕️ {doctorsMap?.[c.DoctorID || c.doctor_id] || (c.DoctorID || c.doctor_id || '—').substring(0, 12) + '…'}</span>
         {zoom && <a href={zoom} target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', fontWeight: 500 }}>🎥 Join Zoom</a>}
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>

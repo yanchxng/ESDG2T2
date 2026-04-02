@@ -6,25 +6,25 @@ import { StatCard, Card, CardHeader, Badge, Button, LoadingRow, EmptyState, Deta
 import AuthModal from '../components/AuthModal'
 
 export default function Dashboard() {
-  const { patient } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [authOpen, setAuthOpen] = useState(false)
   const [consults, setConsults] = useState([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!patient) return
+    if (!user || user.role !== 'patient') return
     setLoading(true)
-    consultApi.getByPatient(patient.PatientID)
+    consultApi.getByPatient(user.PatientID)
       .then(data => setConsults(data.Data || data.data || data || []))
       .catch(() => setConsults([]))
       .finally(() => setLoading(false))
-  }, [patient])
+  }, [user])
 
   const upcoming  = consults.filter(c => (c.Status || c.status) === 'SCHEDULED')
   const completed = consults.filter(c => (c.Status || c.status) === 'COMPLETED')
 
-  if (!patient) {
+  if (!user) {
     return (
       <div className="fade-up">
         <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
@@ -55,11 +55,31 @@ export default function Dashboard() {
     )
   }
 
+  if (user?.role === 'doctor') {
+    return (
+      <div className="fade-up">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 3 }}>Welcome Doctor, {user.Name}</div>
+            <div style={{ fontSize: 13, color: '#6b7280' }}>Manage your consultations and patients.</div>
+          </div>
+          <Button onClick={() => navigate('/admin')}>⚙️ Admin Panel</Button>
+        </div>
+        <Card>
+          <CardHeader title="Doctor Profile" action={<Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>Edit ⚙️</Button>} />
+          <DetailRow label="Name"        value={user.Name} />
+          <DetailRow label="Email"       value={user.Email} />
+          <DetailRow label="Doctor ID"   value={<span style={{ fontFamily: 'monospace', fontSize: 10 }}>{user.DoctorID}</span>} />
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="fade-up">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 3 }}>Welcome back, {patient.Name.split(' ')[0]}</div>
+          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 3 }}>Welcome back, {user.Name.split(' ')[0]}</div>
           <div style={{ fontSize: 13, color: '#6b7280' }}>Here's your health overview</div>
         </div>
         <Button onClick={() => navigate('/book')}>📅 Book Consultation</Button>
@@ -86,11 +106,11 @@ export default function Dashboard() {
         {/* Profile */}
         <Card>
           <CardHeader title="My Profile" action={<Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>Edit ⚙</Button>} />
-          <DetailRow label="Name"        value={patient.Name} />
-          <DetailRow label="Email"       value={patient.Email} />
-          <DetailRow label="Address"     value={patient.Address} />
-          <DetailRow label="Date of Birth" value={fmtDate(patient.DOB)} />
-          <DetailRow label="Patient ID"  value={<span style={{ fontFamily: 'monospace', fontSize: 10 }}>{patient.PatientID}</span>} />
+          <DetailRow label="Name"        value={user.Name} />
+          <DetailRow label="Email"       value={user.Email} />
+          <DetailRow label="Address"     value={user.Address} />
+          <DetailRow label="Date of Birth" value={fmtDate(user.DOB)} />
+          <DetailRow label="Patient ID"  value={<span style={{ fontFamily: 'monospace', fontSize: 10 }}>{user.PatientID}</span>} />
           <div style={{ marginTop: 14 }}>
             <Button size="sm" onClick={() => navigate('/book')}>+ New Booking</Button>
           </div>
