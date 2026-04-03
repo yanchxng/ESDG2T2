@@ -10,8 +10,6 @@ import zoom
 
 load_dotenv()
 
-RESERVATION_MINUTES = 10
-
 app = FastAPI()
 
 app.add_middleware(
@@ -27,11 +25,6 @@ async def startup():
     await init_db()
 
 class CreateConsultRequest(BaseModel):
-    PatientID: str
-    DoctorID:  str
-    timeslot:  datetime
-
-class ReserveSlotRequest(BaseModel):
     PatientID: str
     DoctorID:  str
     timeslot:  datetime
@@ -68,102 +61,12 @@ async def get_unavailable_slots(DoctorID: str, date: str):
             DoctorID, parsed_date
         )
 
-        reserved_rows = await conn.fetch(
-            """
-            SELECT timeslot FROM reservations
-            WHERE doctor_id      = $1
-              AND DATE(timeslot) = $2::date
-              AND expires_at     > $3
-            """,
-            DoctorID, parsed_date, now
-        )
-
         booked   = [row["timeslot"].isoformat() for row in booked_rows]
-        reserved = [row["timeslot"].isoformat() for row in reserved_rows]
 
         return {
             "DoctorID":          DoctorID,
             "date":              date,
-            "unavailable_slots": list(set(booked + reserved))  
-        }
-    finally:
-        await conn.close()
-
-# Called the moment a patient CLICKS a timeslot (before confirming).
-# Holds the slot for 10 mins. If not confirmed in time, it auto-releases.
-@app.post("/api/consults/reserve", status_code=201)
-async def reserve_slot(request: ReserveSlotRequest):
-    """
-    Returns ReservationID which the frontend must include when calling
-    POST /api/consults to confirm the booking.
-    """
-    conn    = await get_db_connection()
-    now     = datetime.now(timezone.utc)
-    expires = now + timedelta(minutes=RESERVATION_MINUTES)
-    try:
-        await conn.execute(
-            """
-            DELETE FROM reservations
-            WHERE doctor_id = $1 AND timeslot = $2::timestamptz AND expires_at <= $3
-            """,
-            request.DoctorID, request.timeslot, now
-        )
-
-        booked = await conn.fetchrow(
-            """
-            SELECT consult_id FROM consultations
-            WHERE doctor_id = $1 AND timeslot = $2::timestamptz AND status != 'cancelled'
-            """,
-            request.DoctorID, request.timeslot
-        )
-        if booked:
-            raise HTTPException(status_code=409, detail="This slot is already booked.")
-
-        existing = await conn.fetchrow(
-            """
-            SELECT reservation_id, patient_id FROM reservations
-            WHERE doctor_id  = $1
-              AND timeslot   = $2::timestamptz
-              AND expires_at > $3
-            """,
-            request.DoctorID, request.timeslot, now
-        )
-        if existing:
-            if existing["patient_id"] == request.PatientID:
-                await conn.execute(
-                    "UPDATE reservations SET expires_at = $1 WHERE reservation_id = $2",
-                    expires, existing["reservation_id"]
-                )
-                return {
-                    "ReservationID": existing["reservation_id"],
-                    "PatientID":     request.PatientID,
-                    "DoctorID":      request.DoctorID,
-                    "timeslot":      request.timeslot,
-                    "expires_at":    expires.isoformat(),
-                    "message":       f"Reservation refreshed. You have {RESERVATION_MINUTES} minutes to confirm."
-                }
-            else:
-                raise HTTPException(
-                    status_code=409,
-                    detail="This slot is currently being held by another user. Please select a different slot."
-                )
-
-        reservation_id = str(uuid.uuid4())
-        await conn.execute(
-            """
-            INSERT INTO reservations (reservation_id, patient_id, doctor_id, timeslot, expires_at)
-            VALUES ($1, $2, $3, $4::timestamptz, $5)
-            """,
-            reservation_id, request.PatientID, request.DoctorID, request.timeslot, expires
-        )
-
-        return {
-            "ReservationID": reservation_id,
-            "PatientID":     request.PatientID,
-            "DoctorID":      request.DoctorID,
-            "timeslot":      request.timeslot,
-            "expires_at":    expires.isoformat(),
-            "message":       f"Slot reserved. You have {RESERVATION_MINUTES} minutes to confirm your booking."
+            "unavailable_slots": list(set(booked))  
         }
     finally:
         await conn.close()
@@ -207,7 +110,7 @@ async def get_consult(consult_id: str):
         await conn.close()
 
 # Called by Make Booking composite (Image 3, step 6).
-# Validates reservation → creates Zoom meeting → saves permanent booking.
+# Creates Zoom meeting → saves permanent booking.
 # Returns {ConsultID, timeslot, url} back to Make Booking composite.
 @app.post("/api/consults", status_code=201)
 async def create_consult(request: CreateConsultRequest):
@@ -252,14 +155,6 @@ async def create_consult(request: CreateConsultRequest):
             """,
             consult_id, request.PatientID, request.DoctorID,
             request.timeslot, zoom_meeting_id, zoom_url, datetime.utcnow()
-        )
-
-        await conn.execute(
-            """
-            DELETE FROM reservations
-            WHERE patient_id = $1 AND doctor_id = $2 AND timeslot = $3::timestamptz
-            """,
-            request.PatientID, request.DoctorID, request.timeslot
         )
 
         return {

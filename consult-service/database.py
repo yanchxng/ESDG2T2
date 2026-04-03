@@ -30,24 +30,10 @@ async def init_db():
         """)
 
         await conn.execute("""
-            CREATE TABLE IF NOT EXISTS reservations (
-                reservation_id  TEXT PRIMARY KEY,
-                patient_id      TEXT NOT NULL,
-                doctor_id       TEXT NOT NULL,
-                timeslot        TIMESTAMPTZ NOT NULL,
-                expires_at      TIMESTAMPTZ NOT NULL
-            );
-        """)
-
-        await conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_consults_doctor_timeslot
             ON consultations (doctor_id, timeslot);
         """)
-        await conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_reservations_doctor_timeslot
-            ON reservations (doctor_id, timeslot);
-        """)
 
-        print("DB ready, consultations + reservations tables initialised.")
+        print("DB ready, consultations table initialised.")
     finally:
         await conn.close()
