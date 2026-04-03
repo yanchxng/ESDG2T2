@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import { signJwtHs256 } from '../utils/signJwtHs256'
 
 const AuthContext = createContext(null)
+
+const JWT_ISSUER = 'http://localhost:8000'
+const JWT_SECRET = 'secret'
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -17,18 +21,31 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }, [])
 
-  function login(userData, role) {
+  async function login(userData, role) {
     const u = {
       ...userData,
       role: role, // 'patient' or 'doctor'
     }
+    // iss must match jwt_secrets.key in kong.yml so Kong can verify HS256 tokens.
+    const token = await signJwtHs256(
+      {
+        userId: userData.Id,
+        role,
+        iss: JWT_ISSUER,
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      },
+      JWT_SECRET,
+    )
+    u.token = token
     setUser(u)
     localStorage.setItem('ml_user', JSON.stringify(u))
+    localStorage.setItem('ml_token', token)
   }
 
   function logout() {
     setUser(null)
     localStorage.removeItem('ml_user')
+    localStorage.removeItem('ml_token')
   }
 
   // Alias patient to user for backward compatibility in some components while they are refactored

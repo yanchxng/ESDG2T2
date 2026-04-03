@@ -1,22 +1,35 @@
 // ─── SERVICE URLs ───────────────────────────────────────────
-// Update these to point at your group's running services.
-// Patient & Doctor: your OutSystems personal environment
-// Others: your group's Python/Flask microservices
+// Patient & Doctor: OutSystems. Kong-backed APIs: dev uses Vite proxy /kong → Kong (same-origin, no CORS).
+// Production: set VITE_KONG_BASE at build time (e.g. https://api.example.com) or defaults to http://localhost:8000
+const kongBase =
+  (import.meta.env.VITE_KONG_BASE && String(import.meta.env.VITE_KONG_BASE).replace(/\/$/, '')) ||
+  (import.meta.env.DEV ? '/kong' : 'http://localhost:8000')
+
 export const CONFIG = {
   patientBase: 'https://personal-dzt0acam.outsystemscloud.com/Patient/rest/Patient',
   doctorBase: 'https://personal-dzt0acam.outsystemscloud.com/Doctor/rest/Doctor',
-  consultBase: 'http://localhost:5003',       // Kushala/Lisa — Consult Service
-  bookingBase: 'http://localhost:4001',       // Nigel — Make Booking composite
-  cancelBase: 'http://localhost:4003',       // Nigel — Cancel Booking composite
-  consultDoctorBase: 'http://localhost:4002',       // Nigel — Consult Doctor composite
-  diagnosisBase: 'http://localhost:5004',       // Aaliya — Diagnosis Service
-  paymentBase: 'http://localhost:5005',       // Aaliya — Payment Service
+  consultBase: `${kongBase}/consult`,
+  bookingBase: `${kongBase}/booking`,
+  cancelBase: `${kongBase}/cancel-booking`,
+  consultDoctorBase: `${kongBase}/consult-doctor`,
+  diagnosisBase: `${kongBase}/diagnosis`,
+  paymentBase: `${kongBase}/payment`,
 }
 
 // ─── GENERIC FETCH WRAPPER ──────────────────────────────────
 export async function apiFetch(url, options = {}) {
+  const token = localStorage.getItem('ml_token')
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) }
-  const res = await fetch(url, { ...options, headers })
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  let res
+  try {
+    res = await fetch(url, { ...options, headers })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    throw new Error(`Network error (no response from server): ${msg}`)
+  }
   const text = await res.text()
   let data
   try { data = JSON.parse(text) } catch { data = text }

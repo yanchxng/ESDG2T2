@@ -26,6 +26,32 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  kong:
+    image: kong:latest
+    container_name: medilink_kong
+    ports:
+      - "8000:8000"   # HTTP proxy (frontend → Kong → services)
+      - "8443:8443"   # HTTPS proxy (self-signed; dev only)
+      - "8001:8001"   # Admin API (config/debug)
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      # Default Kong listens on 8000 + 8443 ssl; overriding only 8000 would drop TLS on 8443.
+      KONG_PROXY_LISTEN: 0.0.0.0:8000 reuseport, 0.0.0.0:8443 ssl reuseport
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001 reuseport
+    volumes:
+      - ./kong.yml:/kong/declarative/kong.yml
+    networks:
+      - medilink_net
+    depends_on:
+      - make-booking-service
+      - consult-doctor-service
+      - cancel-booking-service
+      - consult-service
+      - diagnosis-service
+      - payment-service
+      - notification-service
+
   # ==========================================
   # 2. Composite Microservices 
   # ==========================================
