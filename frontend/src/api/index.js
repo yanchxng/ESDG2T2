@@ -54,6 +54,7 @@ export const consultApi = {
 
 // ─── COMPOSITE SERVICES ─────────────────────────────────────
 export const compositeApi = {
+  getCapacity: (date) => apiFetch(`${CONFIG.bookingBase}/api/booking/capacity?date=${date}`),
   makeBooking: (body) => apiFetch(`${CONFIG.bookingBase}/api/booking`, { method: 'POST', body: JSON.stringify(body) }),
   cancelBooking: (body) => apiFetch(`${CONFIG.cancelBase}/api/booking/cancel`, { method: 'POST', body: JSON.stringify(body) }),
   consultDoctor: (body) => apiFetch(`${CONFIG.consultDoctorBase}/consult-doctor`, { method: 'POST', body: JSON.stringify(body) }),

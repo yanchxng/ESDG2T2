@@ -30,6 +30,52 @@ class BookingRequest(BaseModel):
     PatientID: str
     timeslot: str
 
+@app.get("/api/booking/capacity")
+async def get_booking_capacity(date: str):
+    """
+    Returns a list of timeslots (e.g., '09:00', '14:30') that are fully booked across ALL doctors.
+    """
+    async with httpx.AsyncClient() as client:
+        try:
+            # 1. Get all doctors
+            doctors_res = await client.get(f"{DOCTOR_SERVICE_URL}/doctor/")
+            if doctors_res.status_code != 200:
+                return {"full_slots": []}
+            
+            all_doctors = doctors_res.json().get("Data", [])
+            total_doctors = len(all_doctors)
+            
+            if total_doctors == 0:
+                return {"full_slots": []}
+
+            # 2. Collect unavailable slots for every doctor on this date
+            slot_counts = {}
+            for doctor in all_doctors:
+                doc_id = doctor.get("DoctorID")
+                slots_res = await client.get(f"{CONSULT_SERVICE_URL}/api/consults/slots?DoctorID={doc_id}&date={date}")
+                
+                if slots_res.status_code == 200:
+                    unavailable = slots_res.json().get("unavailable_slots", [])
+                    for slot_iso in unavailable:
+                        try:
+                            # Safely extract time component (HH:MM) from full ISO string
+                            normalized = slot_iso.replace(" ", "T")
+                            if "T" in normalized:
+                                time_part = normalized.split("T")[1][:5]
+                                slot_counts[time_part] = slot_counts.get(time_part, 0) + 1
+                        except IndexError:
+                            pass
+            
+            # 3. Find slots where count matches total doctors (everyone is busy)
+            full_slots = [time for time, count in slot_counts.items() if count >= total_doctors]
+            
+            return {"full_slots": full_slots}
+            
+        except Exception as e:
+            print(f"Capacity Check Error: {str(e)}")
+            return {"full_slots": []}
+
+
 @app.post("/api/booking")
 async def make_booking(request: BookingRequest):
     # We use httpx.AsyncClient() exactly like we used Axios
@@ -61,10 +107,20 @@ async def make_booking(request: BookingRequest):
                 slots_res = await client.get(f"{CONSULT_SERVICE_URL}/api/consults/slots?DoctorID={doc_id}&date={date_str}")
                 if slots_res.status_code == 200:
                     unavailable = slots_res.json().get("unavailable_slots", [])
-                    # Request.timeslot ends with "Z" or something? Let's assume exact match format comparison
-                    # UI sends: 2026-04-01T15:40. If that string is not in unavailable list, pick them
-                    # Alternatively, if they're not in the unavailable list, pick them.
-                    if request.timeslot not in unavailable and f"{request.timeslot}:00" not in unavailable and f"{request.timeslot}:00Z" not in unavailable:
+                    
+                    # Normalize request timeslot for comparison
+                    req_time_str = request.timeslot.replace('Z', '').split('+')[0]
+                    if len(req_time_str.split(':')) == 2:
+                        req_time_str += ':00'
+
+                    is_unavailable = False
+                    for u_slot in unavailable:
+                        u_slot_str = u_slot.replace('Z', '').split('+')[0]
+                        if req_time_str == u_slot_str:
+                            is_unavailable = True
+                            break
+
+                    if not is_unavailable:
                         selected_doctor_id = doc_id
                         doctor_data = doctor
                         break
@@ -90,7 +146,7 @@ async def make_booking(request: BookingRequest):
                 
                 notification_payload = {
                     "to": patient_data.get("Email"),
-                    "from": "appointments@medilink.com",
+                    "from": "medilink.notifications@gmail.com",
                     "subject": "Your Teleconsultation is Confirmed",
                     "details": f"Hello {patient_data.get('Name')}, your teleconsultation has been confirmed. Use the link below to join your Zoom session at the scheduled time.",
                     "zoom_url": consult_data.get("url")

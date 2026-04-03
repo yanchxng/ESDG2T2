@@ -64,8 +64,8 @@ async def complete_consultation(request: ConsultCompleteRequest):
                 queue = await channel.declare_queue("email_notifications", durable=True)
                 
                 notification_payload = {
-                    "to": patient_data.get("email"),
-                    "from": "records@medilink.com",
+                    "to": patient_data.get("Email"),
+                    "from": "medilink.notifications@gmail.com",
                     "subject": "Your Post-Consultation Summary",
                     "details": f"Consultation complete. Diagnosis: {request.diagnosis}. Prescription: {request.prescription}. Amount Paid: ${request.amount}."
                 }

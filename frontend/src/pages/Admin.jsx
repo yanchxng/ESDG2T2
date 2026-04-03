@@ -141,7 +141,7 @@ function DoctorsTab() {
   const toast = useToast()
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '' })
   const [lookupId, setLookupId] = useState('')
   const [lookupResult, setLookupResult] = useState(null)
   const [lookupError, setLookupError] = useState('')
@@ -159,12 +159,12 @@ function DoctorsTab() {
 
   async function handleCreate(e) {
     e.preventDefault()
-    if (!form.name || !form.email) { toast('Fill all fields', 'error'); return }
+    if (!form.name || !form.email || !form.password) { toast('Fill all fields', 'error'); return }
     setCreating(true)
     try {
-      await doctorApi.create({ Name: form.name, Email: form.email })
+      await doctorApi.create({ Name: form.name, Email: form.email, Password: form.password })
       toast(`Doctor "${form.name}" created!`, 'success')
-      setForm({ name: '', email: '' })
+      setForm({ name: '', email: '', password: '' })
       loadAll()
     } catch (err) { toast('Error: ' + err.message, 'error') }
     finally { setCreating(false) }
@@ -217,7 +217,10 @@ function DoctorsTab() {
           <CardHeader title="Register New Doctor" />
           <form onSubmit={handleCreate}>
             <Input label="Full Name" placeholder="Dr. Benjamin Lim" value={form.name}  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-            <Input label="Email"     type="email" placeholder="benlim@medilink.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+              <Input label="Email"     type="email" placeholder="benlim@medilink.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+              <Input label="Password"  type="password" placeholder="••••••••"       value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+            </div>
             <Button type="submit" size="sm" disabled={creating}>{creating ? 'Creating…' : 'Create Doctor'}</Button>
           </form>
         </Card>

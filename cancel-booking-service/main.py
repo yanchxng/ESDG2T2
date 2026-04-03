@@ -13,7 +13,6 @@ load_dotenv()
 PATIENT_SERVICE_URL = os.getenv("PATIENT_SERVICE_URL")
 DOCTOR_SERVICE_URL = os.getenv("DOCTOR_SERVICE_URL")
 CONSULT_SERVICE_URL = os.getenv("CONSULT_SERVICE_URL")
-PAYMENT_SERVICE_URL = os.getenv("PAYMENT_SERVICE_URL")
 AMQP_URL = os.getenv("AMQP_URL")
 
 app = FastAPI()
@@ -40,14 +39,12 @@ async def cancel_booking(request: CancelRequest):
             patient_res.raise_for_status()
             patient_data = patient_res.json().get("Data", {})
 
-            # 2. GET Consult Details (Need this to know which Doctor and Payment to reverse)
+            # 2. GET Consult Details (Need this to know which Doctor)
             consult_res = await client.get(f"{CONSULT_SERVICE_URL}/api/consults/{request.ConsultID}")
             consult_res.raise_for_status()
             consult_data = consult_res.json()
 
             doctor_id = consult_data.get("doctor_id") or consult_data.get("DoctorID")
-            payment_id = consult_data.get("payment_id") or consult_data.get("PaymentID")
-            amount = consult_data.get("amount", 0)
 
             # 3. GET Doctor Details (for notification)
             doctor_res = await client.get(f"{DOCTOR_SERVICE_URL}/doctor/{doctor_id}/")
@@ -62,17 +59,7 @@ async def cancel_booking(request: CancelRequest):
             cancel_res = await client.post(f"{CONSULT_SERVICE_URL}/api/consults/cancel", json=cancel_consult_payload)
             cancel_res.raise_for_status()
 
-            # 5. POST to Payment Service to issue a refund via PayPal
-            if payment_id:
-                refund_payload = {
-                    "PaymentID": payment_id,
-                    "amount": amount,
-                    "action": "refund"
-                }
-                refund_res = await client.post(f"{PAYMENT_SERVICE_URL}/api/payments/refund", json=refund_payload)
-                refund_res.raise_for_status()
-
-            # 6. AMQP Notification (Send cancellation emails to BOTH parties)
+            # 5. AMQP Notification (Send cancellation emails to BOTH parties)
             connection = await aio_pika.connect_robust(AMQP_URL)
             async with connection:
                 channel = await connection.channel()
@@ -81,15 +68,15 @@ async def cancel_booking(request: CancelRequest):
                 # Payload for Patient
                 patient_email_payload = {
                     "to": patient_data.get("Email"),
-                    "from": "appointments@medilink.com",
-                    "subject": "Cancellation Confirmed & Refund Initiated",
-                    "details": f"Hi {patient_data.get('Name')}, your consult ({request.ConsultID}) has been cancelled. A refund of ${amount} has been initiated."
+                    "from": "medilink.notifications@gmail.com",
+                    "subject": "Cancellation Confirmed",
+                    "details": f"Hi {patient_data.get('Name')}, your consult ({request.ConsultID}) has been successfully cancelled."
                 }
                 
                 # Payload for Doctor
                 doctor_email_payload = {
                     "to": doctor_data.get("Email"),
-                    "from": "appointments@medilink.com",
+                    "from": "medilink.notifications@gmail.com",
                     "subject": "Appointment Cancelled by Patient",
                     "details": f"Dr. {doctor_data.get('Name')}, please note that your appointment ({request.ConsultID}) has been cancelled by the patient."
                 }
@@ -108,7 +95,6 @@ async def cancel_booking(request: CancelRequest):
             return {
                 "ConsultID": request.ConsultID,
                 "status": "cancelled",
-                "refund_status": "initiated" if payment_id else "no_payment_found"
             }
 
         except httpx.HTTPStatusError as exc:

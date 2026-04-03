@@ -18,6 +18,8 @@ export default function BookConsult() {
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
   const [booking, setBooking] = useState(false)
+  const [fullSlots, setFullSlots] = useState([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
 
   // Min datetime = now
   const nowISO = (() => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16) })()
@@ -52,6 +54,25 @@ export default function BookConsult() {
       .catch(err => toast('Could not load doctors: ' + err.message, 'error'))
       .finally(() => setDoctorsLoading(false))
   }, [user])
+
+  useEffect(() => {
+    if (selectedDate && user && user.role === 'patient') {
+      setLoadingSlots(true)
+      compositeApi.getCapacity(selectedDate)
+        .then(res => {
+          setTimeout(() => {
+            setFullSlots(res.full_slots || [])
+            setLoadingSlots(false)
+          }, 3000)
+        })
+        .catch(err => {
+          console.error("Could not fetch capacity:", err)
+          setTimeout(() => {
+            setLoadingSlots(false)
+          }, 2000)
+        })
+    }
+  }, [selectedDate, user])
 
   async function handleBook() {
     if (!canBook) return
@@ -104,30 +125,41 @@ export default function BookConsult() {
           
           <div style={{ marginTop: 16 }}>
             <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 8 }}>Available Times (15 min intervals)</label>
+            {loadingSlots ? (
+              <div style={{ padding: '32px 0', textAlign: 'center', fontSize: 13, color: '#6b7280', background: '#f9fafb', borderRadius: 8, border: '1px dashed #e5e7eb' }}>
+                <span className="spinner" style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #e5e7eb', borderTopColor: '#0ea5e9', borderRadius: '50%', animation: 'spin 1s linear infinite', marginRight: 8, verticalAlign: 'middle' }}></span>
+                Loading available timeslots...
+              </div>
+            ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: 8 }}>
               {availableTimes.map(time => {
                 const isPast = isToday && time <= currentTime;
+                const isFull = fullSlots.includes(time);
+                const isDisabled = isPast || isFull;
                 const isSelected = selectedTime === time;
                 return (
                   <button
                     key={time}
-                    disabled={isPast}
+                    disabled={isDisabled}
                     onClick={() => setSelectedTime(time)}
+                    title={isFull ? "Fully booked" : ""}
                     style={{
                       padding: '8px 4px', borderRadius: 6, border: '1px solid',
-                      borderColor: isSelected ? '#0ea5e9' : isPast ? '#f3f4f6' : '#e5e7eb',
-                      background: isSelected ? '#e0f2fe' : isPast ? '#f9fafb' : '#fff',
-                      color: isPast ? '#d1d5db' : isSelected ? '#0284c7' : '#374151',
-                      cursor: isPast ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 500, transition: 'all 0.15s'
+                      borderColor: isSelected ? '#0ea5e9' : isDisabled ? '#e5e7eb' : '#e5e7eb',
+                      background: isSelected ? '#e0f2fe' : isDisabled ? '#f3f4f6' : '#fff',
+                      color: isDisabled ? '#9ca3af' : isSelected ? '#0284c7' : '#374151',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 500, transition: 'all 0.15s',
+                      textDecoration: isFull ? 'line-through' : 'none'
                     }}
-                    onMouseEnter={e => { if (!isSelected && !isPast) { e.currentTarget.style.borderColor = '#0ea5e9'; e.currentTarget.style.color = '#0284c7' } }}
-                    onMouseLeave={e => { if (!isSelected && !isPast) { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.color = '#374151' } }}
+                    onMouseEnter={e => { if (!isSelected && !isDisabled) { e.currentTarget.style.borderColor = '#0ea5e9'; e.currentTarget.style.color = '#0284c7' } }}
+                    onMouseLeave={e => { if (!isSelected && !isDisabled) { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.color = '#374151' } }}
                   >
                     {time}
                   </button>
                 )
               })}
             </div>
+            )}
           </div>
         </Card>
       </div>
