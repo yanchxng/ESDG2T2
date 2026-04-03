@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uuid
 import os
@@ -10,6 +11,13 @@ load_dotenv()
 
 app = FastAPI(title="Diagnosis Service")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("startup")
 async def startup():
@@ -56,4 +64,17 @@ async def create_diagnosis(request: CreateDiagnosisRequest):
 
     # Contract needed by `consult-doctor-service`: it expects { "DiagnosisID": ... }
     return {"DiagnosisID": diagnosis_id}
+
+@app.get("/api/diagnoses/{consult_id}")
+async def get_diagnosis(consult_id: str):
+    conn = await get_db_connection()
+    try:
+        row = await conn.fetchrow(
+            "SELECT * FROM diagnoses WHERE consult_id = $1", consult_id
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="Diagnosis not found")
+        return dict(row)
+    finally:
+        await conn.close()
 

@@ -14,6 +14,7 @@ export function Button({ children, variant = 'primary', size = 'md', disabled, o
     primary:   { background: '#0ea5e9', color: '#fff' },
     secondary: { background: '#fff', color: '#374151', border: '1px solid #e5e7eb' },
     danger:    { background: '#ef4444', color: '#fff' },
+    success:   { background: '#10b981', color: '#fff' },
     ghost:     { background: 'transparent', color: '#0ea5e9', padding: size === 'sm' ? '6px 10px' : '9px 14px' },
   }
   return (
@@ -24,6 +25,7 @@ export function Button({ children, variant = 'primary', size = 'md', disabled, o
         if (variant === 'primary')   e.currentTarget.style.background = '#0284c7'
         if (variant === 'secondary') e.currentTarget.style.background = '#f9fafb'
         if (variant === 'danger')    e.currentTarget.style.background = '#dc2626'
+        if (variant === 'success')   e.currentTarget.style.background = '#059669'
         if (variant === 'ghost')     e.currentTarget.style.background = '#e0f2fe'
       }}
       onMouseLeave={e => {

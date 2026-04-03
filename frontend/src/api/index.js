@@ -8,7 +8,7 @@ export const CONFIG = {
   consultBase: 'http://localhost:5003',       // Kushala/Lisa — Consult Service
   bookingBase: 'http://localhost:4001',       // Nigel — Make Booking composite
   cancelBase: 'http://localhost:4003',       // Nigel — Cancel Booking composite
-  consultDoctorBase: 'http://localhost:5003',       // Nigel — Consult Doctor composite
+  consultDoctorBase: 'http://localhost:4002',       // Nigel — Consult Doctor composite
   diagnosisBase: 'http://localhost:5004',       // Aaliya — Diagnosis Service
   paymentBase: 'http://localhost:5005',       // Aaliya — Payment Service
 }
@@ -57,7 +57,7 @@ export const compositeApi = {
   getCapacity: (date) => apiFetch(`${CONFIG.bookingBase}/api/booking/capacity?date=${date}`),
   makeBooking: (body) => apiFetch(`${CONFIG.bookingBase}/api/booking`, { method: 'POST', body: JSON.stringify(body) }),
   cancelBooking: (body) => apiFetch(`${CONFIG.cancelBase}/api/booking/cancel`, { method: 'POST', body: JSON.stringify(body) }),
-  consultDoctor: (body) => apiFetch(`${CONFIG.consultDoctorBase}/consult-doctor`, { method: 'POST', body: JSON.stringify(body) }),
+  consultDoctor: (body) => apiFetch(`${CONFIG.consultDoctorBase}/api/consultation/complete`, { method: 'POST', body: JSON.stringify(body) }),
 }
 
 // ─── HELPERS ────────────────────────────────────────────────
@@ -81,4 +81,8 @@ export function fmtDT(d) {
 
 export function getInitial(name) {
   return name ? name[0].toUpperCase() : '?'
+}
+
+export const diagnosisApi = {
+  getByConsult: (consultId) => apiFetch(`${CONFIG.diagnosisBase}/api/diagnoses/${consultId}`),
 }

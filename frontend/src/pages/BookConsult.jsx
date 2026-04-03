@@ -97,7 +97,6 @@ export default function BookConsult() {
         <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 3 }}>Book a Consultation</div>
-          <div style={{ fontSize: 13, color: '#6b7280' }}>Scenario 1 — Select a doctor and timeslot</div>
         </div>
         <Card style={{ textAlign: 'center', padding: 48 }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
@@ -113,7 +112,6 @@ export default function BookConsult() {
     <div className="fade-up">
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 3 }}>Book a Consultation</div>
-        <div style={{ fontSize: 13, color: '#6b7280' }}>Scenario 1 — Select a date and time. A doctor will be randomly assigned based on their availability.</div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 18, marginBottom: 18, maxWidth: 600 }}>
@@ -179,9 +177,6 @@ export default function BookConsult() {
         <Button disabled={!canBook || booking} onClick={handleBook}>
           {booking ? 'Booking…' : 'Book Consultation'}
         </Button>
-        <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 10 }}>
-          Calls: Make Booking → Consult Service → Zoom API → Notification Service
-        </p>
       </Card>
     </div>
   )
