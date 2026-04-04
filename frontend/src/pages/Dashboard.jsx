@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { consultApi, fmtDate, fmtDT } from '../api'
+import { consultApi, analyticsApi, fmtDate, fmtDT } from '../api'
 import { StatCard, Card, CardHeader, Badge, Button, LoadingRow, EmptyState, DetailRow } from '../components/UI'
 import AuthModal from '../components/AuthModal'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -12,6 +13,10 @@ export default function Dashboard() {
   const [consults, setConsults] = useState([])
   const [loading, setLoading] = useState(false)
 
+  // Doctor analytics state
+  const [analytics, setAnalytics] = useState(null)
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
+
   useEffect(() => {
     if (!user || user.role !== 'patient') return
     setLoading(true)
@@ -19,6 +24,15 @@ export default function Dashboard() {
       .then(data => setConsults(data.Data || data.data || data || []))
       .catch(() => setConsults([]))
       .finally(() => setLoading(false))
+  }, [user])
+
+  useEffect(() => {
+    if (!user || user.role !== 'doctor') return
+    setAnalyticsLoading(true)
+    analyticsApi.getDoctorAnalytics(user.DoctorID)
+      .then(data => setAnalytics(data))
+      .catch(() => setAnalytics(null))
+      .finally(() => setAnalyticsLoading(false))
   }, [user])
 
   const upcoming  = consults.filter(c => (c.Status || c.status) === 'SCHEDULED')
@@ -65,12 +79,275 @@ export default function Dashboard() {
           </div>
           <Button onClick={() => navigate('/admin')}>⚙️ Admin Panel</Button>
         </div>
-        <Card>
-          <CardHeader title="Doctor Profile" action={<Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>Edit ⚙️</Button>} />
-          <DetailRow label="Name"        value={user.Name} />
-          <DetailRow label="Email"       value={user.Email} />
-          <DetailRow label="Doctor ID"   value={<span style={{ fontFamily: 'monospace', fontSize: 10 }}>{user.DoctorID}</span>} />
-        </Card>
+
+        {/* Doctor Analytics Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+          <StatCard
+            label="Total Consults"
+            value={analyticsLoading ? '…' : analytics?.stats?.totalConsultations || 0}
+            sub="all time"
+            icon="📊"
+            iconBg="#e0f2fe"
+          />
+          <StatCard
+            label="Completed"
+            value={analyticsLoading ? '…' : analytics?.stats?.completedConsultations || 0}
+            sub="consultations"
+            icon="✅"
+            iconBg="#f0fdf4"
+          />
+          <StatCard
+            label="Upcoming"
+            value={analyticsLoading ? '…' : analytics?.stats?.upcomingConsultations || 0}
+            sub="scheduled"
+            icon="📅"
+            iconBg="#fef3c7"
+          />
+          <StatCard
+            label="Cancelled"
+            value={analyticsLoading ? '…' : analytics?.stats?.cancelledConsultations || 0}
+            sub="consultations"
+            icon="❌"
+            iconBg="#fee2e2"
+          />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 24 }}>
+          {/* Consultation Status Distribution - Pie Chart */}
+          <Card>
+            <CardHeader title="Status Distribution" />
+            {analyticsLoading ? <LoadingRow /> : !analytics?.stats ? (
+              <EmptyState icon="📊" message="No data available" />
+            ) : (
+              <div style={{ height: 180, padding: '14px 0' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Completed', value: analytics.stats.completedConsultations, color: '#10b981' },
+                        { name: 'Upcoming', value: analytics.stats.upcomingConsultations, color: '#f59e0b' },
+                        { name: 'Cancelled', value: analytics.stats.cancelledConsultations, color: '#ef4444' }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={70}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {[
+                        { name: 'Completed', value: analytics.stats.completedConsultations, color: '#10b981' },
+                        { name: 'Upcoming', value: analytics.stats.upcomingConsultations, color: '#f59e0b' },
+                        { name: 'Cancelled', value: analytics.stats.cancelledConsultations, color: '#ef4444' }
+                      ].map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#fff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '12px'
+                      }}
+                      formatter={(value, name) => [`${value} consultations`, name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 8, height: 8, background: '#10b981', borderRadius: '50%' }} />
+                    <span style={{ fontSize: 11, color: '#6b7280' }}>Completed</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 8, height: 8, background: '#f59e0b', borderRadius: '50%' }} />
+                    <span style={{ fontSize: 11, color: '#6b7280' }}>Upcoming</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 8, height: 8, background: '#ef4444', borderRadius: '50%' }} />
+                    <span style={{ fontSize: 11, color: '#6b7280' }}>Cancelled</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Peak Hours - Compact Bar Chart */}
+          <Card>
+            <CardHeader title="Peak Hours" />
+            {analyticsLoading ? <LoadingRow /> : !analytics?.peakHours?.length ? (
+              <EmptyState icon="🕐" message="No data" />
+            ) : (
+              <div style={{ height: 200, padding: '16px 0' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={analytics.peakHours.slice(0, 8)} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                    <XAxis
+                      dataKey="hour"
+                      tick={{ fontSize: 10, fill: '#6b7280' }}
+                      tickFormatter={(hour) => `${hour}`}
+                    />
+                    <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} />
+                    <Bar dataKey="count" fill="#0ea5e9" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </Card>
+
+          {/* Top Diagnoses */}
+          <Card>
+            <CardHeader title="Top Diagnoses" />
+            {analyticsLoading ? <LoadingRow /> : !analytics?.topDiagnoses?.length ? (
+              <EmptyState icon="🏥" message="No diagnosis data available" />
+            ) : (
+              <div style={{ padding: '8px 0' }}>
+                {analytics.topDiagnoses.map((diag, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < analytics.topDiagnoses.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>{diag.diagnosis}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{
+                        width: Math.min(diag.count * 8, 60),
+                        height: 6,
+                        background: '#8b5cf6',
+                        borderRadius: 3
+                      }} />
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#8b5cf6' }}>{diag.count}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Recent Prescriptions/Diagnoses */}
+          <Card>
+            <CardHeader title="Recent Patient Care" />
+            {analyticsLoading ? <LoadingRow /> : !analytics?.recentDiagnoses?.length ? (
+              <EmptyState icon="💊" message="No recent diagnoses" />
+            ) : (
+              <div style={{ padding: '8px 0' }}>
+                {analytics.recentDiagnoses.map((diag, i) => (
+                  <div key={i} style={{ padding: '12px 0', borderBottom: i < analytics.recentDiagnoses.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{diag.diagnosis}</span>
+                      <span style={{ fontSize: 10, color: '#6b7280' }}>{fmtDate(diag.createdAt)}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
+                      Patient: {diag.patientId}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#059669', fontWeight: 500 }}>
+                      💊 {diag.prescription}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 18, marginBottom: 24 }}>
+          {/* Recent Activity Trends - Full Line Chart */}
+          <Card>
+            <CardHeader title="Consultation Trends (30 Days)" />
+            {analyticsLoading ? <LoadingRow /> : !analytics?.trends?.length ? (
+              <EmptyState icon="📈" message="No recent consultations" />
+            ) : (
+              <div style={{ height: 300, padding: '16px 0' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={analytics.trends}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                      tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    />
+                    <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#fff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '12px'
+                      }}
+                      formatter={(value, name) => [`${value} consultations`, 'Daily Count']}
+                      labelFormatter={(date) => fmtDate(date)}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#10b981"
+                      strokeWidth={3}
+                      dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2, fill: '#fff' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </Card>
+
+          {/* Monthly Performance Summary */}
+          <Card>
+            <CardHeader title="Monthly Summary" />
+            {analyticsLoading ? <LoadingRow /> : (
+              <div style={{ padding: '16px 0' }}>
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: '#0ea5e9', marginBottom: 4 }}>
+                    {analytics?.monthlyComparison?.currentMonth || 0}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>This month</div>
+                </div>
+
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 20, fontWeight: 600, color: '#6b7280' }}>
+                    {analytics?.monthlyComparison?.previousMonth || 0}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>Last month</div>
+                </div>
+
+                <div style={{
+                  padding: '12px',
+                  background: (analytics?.monthlyComparison?.growthPercentage || 0) >= 0 ? '#f0fdf4' : '#fef2f2',
+                  borderRadius: 8,
+                  border: `1px solid ${(analytics?.monthlyComparison?.growthPercentage || 0) >= 0 ? '#bbf7d0' : '#fecaca'}`
+                }}>
+                  <div style={{
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: (analytics?.monthlyComparison?.growthPercentage || 0) >= 0 ? '#166534' : '#991b1b'
+                  }}>
+                    {(analytics?.monthlyComparison?.growthPercentage || 0) >= 0 ? '↗' : '↘'} {Math.abs(analytics?.monthlyComparison?.growthPercentage || 0)}%
+                  </div>
+                  <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+                    Growth rate
+                  </div>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+          {/* Recent Consultations */}
+          <Card>
+            <CardHeader title="Recent Consultations" action={<button onClick={() => navigate('/consults')} style={{ background: 'none', border: 'none', color: '#0ea5e9', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>View all →</button>} />
+            {analyticsLoading ? <LoadingRow /> : !analytics?.recentConsultations?.length ? (
+              <EmptyState icon="📋" message="No recent consultations" />
+            ) : analytics.recentConsultations.map(c => (
+              <ConsultRow key={c.consult_id || c.ConsultID} c={c} />
+            ))}
+          </Card>
+
+          {/* Doctor Profile */}
+          <Card>
+            <CardHeader title="Doctor Profile" action={<Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>Edit ⚙️</Button>} />
+            <DetailRow label="Name"        value={user.Name} />
+            <DetailRow label="Email"       value={user.Email} />
+            <DetailRow label="Doctor ID"   value={<span style={{ fontFamily: 'monospace', fontSize: 10 }}>{user.DoctorID}</span>} />
+          </Card>
+        </div>
       </div>
     )
   }

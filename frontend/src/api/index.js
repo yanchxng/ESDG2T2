@@ -52,6 +52,74 @@ export const consultApi = {
   getById: (id) => apiFetch(`${CONFIG.consultBase}/api/consults/${id}`),
 }
 
+// ─── GRAPHQL API ────────────────────────────────────────────
+export async function graphqlFetch(query, variables = {}) {
+  const res = await fetch(`${CONFIG.consultBase}/graphql`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables })
+  })
+  const data = await res.json()
+  if (data.errors) {
+    throw new Error(data.errors[0].message)
+  }
+  return data.data
+}
+
+export const analyticsApi = {
+  getDoctorAnalytics: (doctorId) => Promise.all([
+    graphqlFetch(`
+      query GetDoctorStats($doctorId: String!) {
+        getConsultationStats(doctorId: $doctorId) {
+          totalConsultations
+          completedConsultations
+          upcomingConsultations
+          cancelledConsultations
+        }
+        getConsultationTrends(doctorId: $doctorId, days: 30) {
+          date
+          count
+        }
+        getPeakHours(doctorId: $doctorId) {
+          hour
+          count
+        }
+        getWeeklyPattern(doctorId: $doctorId) {
+          day
+          count
+        }
+        getMonthlyComparison(doctorId: $doctorId) {
+          currentMonth
+          previousMonth
+          growthPercentage
+        }
+        getTopDiagnoses(doctorId: $doctorId, limit: 5) {
+          diagnosis
+          count
+        }
+        getRecentDiagnoses(doctorId: $doctorId, limit: 5) {
+          diagnosisId
+          consultId
+          patientId
+          diagnosis
+          prescription
+          createdAt
+        }
+      }
+    `, { doctorId }),
+    consultApi.getByDoctor(doctorId)
+  ]).then(([graphqlData, consultations]) => ({
+    stats: graphqlData.getConsultationStats,
+    trends: graphqlData.getConsultationTrends,
+    peakHours: graphqlData.getPeakHours,
+    weeklyPattern: graphqlData.getWeeklyPattern,
+    monthlyComparison: graphqlData.getMonthlyComparison,
+    topDiagnoses: graphqlData.getTopDiagnoses,
+    recentDiagnoses: graphqlData.getRecentDiagnoses,
+    recentConsultations: consultations.slice(0, 5)
+  }))
+}
+
 // ─── COMPOSITE SERVICES ─────────────────────────────────────
 export const compositeApi = {
   getCapacity: (date) => apiFetch(`${CONFIG.bookingBase}/api/booking/capacity?date=${date}`),
