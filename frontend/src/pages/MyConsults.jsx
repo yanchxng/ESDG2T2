@@ -106,6 +106,11 @@ export default function MyConsults() {
       toast('Please enter both diagnosis and prescription.', 'error')
       return
     }
+    const confirmPayment = window.confirm(
+      'Consultation complete. Proceed to charge patient $35.00 via PayPal Sandbox?'
+    )
+    if (!confirmPayment) return
+
     setActioning(true)
     try {
       await compositeApi.consultDoctor({
@@ -115,7 +120,7 @@ export default function MyConsults() {
         prescription: completeForm.prescription,
         amount: 35.00
       })
-      toast('Consultation completed and info recorded!', 'success')
+      toast('Payment processed and diagnosis saved!', 'success')
       setCompleteModalOpen(false)
       setSelected(null)
       load()
