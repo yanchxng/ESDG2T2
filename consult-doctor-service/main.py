@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 import aio_pika
@@ -16,6 +17,14 @@ PAYMENT_SERVICE_URL = os.getenv("PAYMENT_SERVICE_URL")
 AMQP_URL = os.getenv("AMQP_URL")
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class ConsultCompleteRequest(BaseModel):
     PatientID: str

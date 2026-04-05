@@ -107,8 +107,10 @@ services:
       - ZOOM_ACCOUNT_ID=${ZOOM_ACCOUNT_ID}
       - ZOOM_CLIENT_ID=${ZOOM_CLIENT_ID}
       - ZOOM_CLIENT_SECRET=${ZOOM_CLIENT_SECRET}
+      - DIAGNOSIS_SERVICE_URL=http://diagnosis-service:5000
     depends_on:
       - postgres-db
+      - diagnosis-service
     networks:
       - medilink_net
 
