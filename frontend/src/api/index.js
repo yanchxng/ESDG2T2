@@ -16,9 +16,26 @@ export const CONFIG = {
   paymentBase: `${kongBase}/payment`,
 }
 
+/** Kong expects Authorization: Bearer <jwt>. Prefer ml_token; fall back to token embedded in ml_user. */
+function getStoredJwt() {
+  let raw = localStorage.getItem('ml_token')
+  if (!raw) {
+    try {
+      const u = JSON.parse(localStorage.getItem('ml_user') || 'null')
+      if (u?.token) raw = u.token
+    } catch {
+      /* ignore */
+    }
+  }
+  if (!raw) return ''
+  raw = String(raw).trim()
+  if (raw.toLowerCase().startsWith('bearer ')) raw = raw.slice(7).trim()
+  return raw
+}
+
 // ─── GENERIC FETCH WRAPPER ──────────────────────────────────
 export async function apiFetch(url, options = {}) {
-  const token = localStorage.getItem('ml_token')
+  const token = getStoredJwt()
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`

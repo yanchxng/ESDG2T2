@@ -83,7 +83,8 @@ async def complete_consultation(request: ConsultCompleteRequest):
                 "status": "success",
                 "PaymentID": payment_data.get("PaymentID"),
                 "DiagnosisID": diag_data.get("DiagnosisID"),
-                "paymentStatus": payment_data.get("status")
+                "paymentStatus": payment_data.get("status"),
+                "checkout_url": payment_data.get("checkout_url")
             }
 
         except Exception as e:
