@@ -133,8 +133,9 @@ services:
       - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
       - PAYPAL_CURRENCY=USD
       - PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
-      # PayPal return URLs after patient checkout (browser must reach your Vite dev server or deployed UI)
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - PATIENT_SERVICE_URL=${PATIENT_SERVICE_URL}
+      - AMQP_URL=amqp://rabbitmq:5672
     depends_on:
       - postgres-db
     networks:

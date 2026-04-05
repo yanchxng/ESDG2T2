@@ -5,6 +5,8 @@ from decimal import Decimal, InvalidOperation
 import uuid
 import os
 import base64
+import json
+import aio_pika
 from dotenv import load_dotenv
 import httpx
 
@@ -32,6 +34,8 @@ PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET")
 PAYPAL_BASE_URL = os.getenv("PAYPAL_BASE_URL", "https://api-m.sandbox.paypal.com")
 PAYPAL_CURRENCY = os.getenv("PAYPAL_CURRENCY", "SGD")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+PATIENT_SERVICE_URL = os.getenv("PATIENT_SERVICE_URL")
+AMQP_URL = os.getenv("AMQP_URL", "amqp://rabbitmq:5672")
 
 
 class CreatePaymentRequest(BaseModel):
@@ -204,6 +208,86 @@ async def list_pending_payments_for_patient(patient_id: str):
         ]
     }
 
+@app.post("/api/payments/{payment_id}/capture")
+async def capture_payment(payment_id: str):
+    conn = await get_db_connection()
+    try:
+        payment_row = await conn.fetchrow(
+            "SELECT status, patient_id, amount, consult_id FROM payments WHERE payment_id = $1",
+            payment_id
+        )
+        if not payment_row:
+            raise HTTPException(status_code=404, detail="Payment not found")
+        if payment_row["status"] == "PAID":
+            return {"status": "PAID", "payment_id": payment_id}
+
+        access_token = await paypal_get_access_token()
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            capture_res = await client.post(
+                f"{PAYPAL_BASE_URL}/v2/checkout/orders/{payment_id}/capture",
+                headers=headers
+            )
+
+            if capture_res.status_code not in (200, 201, 202):
+                print(f"PayPal Capture Error: {capture_res.text}")
+                # sometimes already closed/captured returns 422 Unprocessable Entity
+                if capture_res.status_code == 422 and "ORDER_ALREADY_CAPTURED" in capture_res.text:
+                    pass
+                else:
+                    raise HTTPException(status_code=400, detail="Failed to capture payment with PayPal")
+
+            capture_data = capture_res.json()
+            capture_id = _extract_capture_id(capture_data)
+
+        updated_row = await conn.fetchrow(
+            """
+            UPDATE payments
+            SET status = 'PAID',
+                paypal_transaction_id = $1,
+                updated_at = NOW()
+            WHERE payment_id = $2 AND status != 'PAID'
+            RETURNING payment_id
+            """,
+            capture_id or payment_id,
+            payment_id
+        )
+
+        if updated_row:
+            amount_paid = float(payment_row["amount"])
+
+            # Notification logic
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    patient_res = await client.get(f"{PATIENT_SERVICE_URL}/patient/{payment_row['patient_id']}/")
+                    if patient_res.status_code == 200:
+                        patient_data = patient_res.json().get("Data", {})
+                        patient_email = patient_data.get("Email")
+                        patient_name = patient_data.get("Name", "Valued Patient")
+                        if patient_email:
+                            connection = await aio_pika.connect_robust(AMQP_URL)
+                            async with connection:
+                                channel = await connection.channel()
+                                payload = {
+                                    "to": patient_email,
+                                    "from": "medilink.notifications@gmail.com",
+                                    "subject": "Payment Receipt - MediLink",
+                                    "details": f"Hi {patient_name}, your payment of ${amount_paid:.2f} {PAYPAL_CURRENCY} for consultation ({payment_row['consult_id']}) has been successfully processed. Thank you!"
+                                }
+                                await channel.default_exchange.publish(
+                                    aio_pika.Message(body=json.dumps(payload).encode()),
+                                    routing_key="email_notifications",
+                                )
+            except Exception as e:
+                print(f"Failed to send email notification to patient: {e}")
+
+        return {"status": "PAID", "payment_id": payment_id, "capture_id": capture_id}
+    finally:
+        await conn.close()
 
 @app.post("/api/payments/refund")
 async def refund_payment(request: RefundPaymentRequest):

@@ -79,7 +79,7 @@ async def complete_consultation(request: ConsultCompleteRequest):
                 
                 checkout_url = payment_data.get("checkout_url") or ""
                 pay_line = (
-                    f'<p><a href="{html.escape(checkout_url)}">Pay ${request.amount:.2f} with PayPal</a> (use your own PayPal account — not the doctor\'s).</p>'
+                    f'<p><a href="{html.escape(checkout_url)}">Pay ${request.amount:.2f} with PayPal</a>.</p>'
                     if checkout_url
                     else "<p>Please open MediLink, go to <b>My Consultations</b>, and use <b>Pay with PayPal</b> for this visit.</p>"
                 )
