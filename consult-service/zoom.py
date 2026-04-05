@@ -46,7 +46,7 @@ async def create_meeting(topic: str, start_time: str, duration: int = 30) -> dic
                 "type":       2,
                 "start_time": start_time,
                 "duration":   duration,
-                "timezone":   "UTC",
+                "timezone":   "Asia/Singapore",
                 "settings": {
                     "host_video":       True,
                     "participant_video": True,
