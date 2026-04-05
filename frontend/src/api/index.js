@@ -84,9 +84,15 @@ export const consultApi = {
 
 // ─── GRAPHQL API ────────────────────────────────────────────
 export async function graphqlFetch(query, variables = {}) {
+  const token = localStorage.getItem('ml_token')
+  const headers = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const res = await fetch(`${CONFIG.consultBase}/graphql`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ query, variables })
   })
   const data = await res.json()
@@ -158,6 +164,11 @@ export const compositeApi = {
   consultDoctor: (body) => apiFetch(`${CONFIG.consultDoctorBase}/api/consultation/complete`, { method: 'POST', body: JSON.stringify(body) }),
 }
 
+// ─── PAYMENT SERVICE ────────────────────────────────────────
+export const paymentApi = {
+  listPendingForPatient: (patientId) => apiFetch(`${CONFIG.paymentBase}/api/payments/pending/patient/${patientId}`),
+}
+
 // ─── HELPERS ────────────────────────────────────────────────
 export function fmtDate(d) {
   if (!d) return '—'
@@ -183,10 +194,4 @@ export function getInitial(name) {
 
 export const diagnosisApi = {
   getByConsult: (consultId) => apiFetch(`${CONFIG.diagnosisBase}/api/diagnoses/${consultId}`),
-}
-
-export const paymentApi = {
-  /** Pending PayPal checkouts for this patient (patient completes payment in their browser). */
-  listPendingForPatient: (patientId) =>
-    apiFetch(`${CONFIG.paymentBase}/api/payments/pending/patient/${patientId}`),
 }
