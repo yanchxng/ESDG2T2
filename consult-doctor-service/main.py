@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import httpx
 import aio_pika
+import html
 import json
 import os
 from dotenv import load_dotenv
@@ -67,11 +68,23 @@ async def complete_consultation(request: ConsultCompleteRequest):
                 channel = await connection.channel()
                 queue = await channel.declare_queue("email_notifications", durable=True)
                 
+                checkout_url = payment_data.get("checkout_url") or ""
+                pay_line = (
+                    f'<p><a href="{html.escape(checkout_url)}">Pay ${request.amount:.2f} with PayPal</a> (use your own PayPal account — not the doctor\'s).</p>'
+                    if checkout_url
+                    else "<p>Please open MediLink, go to <b>My Consultations</b>, and use <b>Pay with PayPal</b> for this visit.</p>"
+                )
                 notification_payload = {
                     "to": patient_data.get("Email") or patient_data.get("email") or "test@example.com",
                     "from": "medilink.notifications@gmail.com",
-                    "subject": "Payment Receipt & Post-Consultation Summary",
-                    "details": f"Your consultation has been successfully completed.<br><br><b>Diagnosis:</b> {request.diagnosis}<br><b>Prescription:</b> {request.prescription}<br><br><b>Amount Paid:</b> ${request.amount:.2f}<br><b>Payment ID:</b> {payment_data.get('PaymentID')}"
+                    "subject": "Consultation complete — please complete payment",
+                    "details": (
+                        f"<p>Your consultation is complete.</p>"
+                        f"<p><b>Diagnosis:</b> {html.escape(request.diagnosis)}<br>"
+                        f"<b>Prescription:</b> {html.escape(request.prescription)}</p>"
+                        f"{pay_line}"
+                        f"<p><small>Consultation ID: {html.escape(request.ConsultID)}</small></p>"
+                    ),
                 }
                 
                 await channel.default_exchange.publish(

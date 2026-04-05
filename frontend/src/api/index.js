@@ -116,3 +116,9 @@ export function getInitial(name) {
 export const diagnosisApi = {
   getByConsult: (consultId) => apiFetch(`${CONFIG.diagnosisBase}/api/diagnoses/${consultId}`),
 }
+
+export const paymentApi = {
+  /** Pending PayPal checkouts for this patient (patient completes payment in their browser). */
+  listPendingForPatient: (patientId) =>
+    apiFetch(`${CONFIG.paymentBase}/api/payments/pending/patient/${patientId}`),
+}

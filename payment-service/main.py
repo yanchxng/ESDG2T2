@@ -23,6 +23,7 @@ PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
 PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET")
 PAYPAL_BASE_URL = os.getenv("PAYPAL_BASE_URL", "https://api-m.sandbox.paypal.com")
 PAYPAL_CURRENCY = os.getenv("PAYPAL_CURRENCY", "SGD")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
 
 class CreatePaymentRequest(BaseModel):
@@ -115,8 +116,8 @@ async def create_payment(request: CreatePaymentRequest):
             }
         ],
         "application_context": {
-            "return_url": "http://localhost:5173/payment-success", # Your frontend success page
-            "cancel_url": "http://localhost:5173/payment-cancelled"
+            "return_url": f"{FRONTEND_URL}/payment-success",
+            "cancel_url": f"{FRONTEND_URL}/payment-cancelled",
         }
     }
 
@@ -139,10 +140,19 @@ async def create_payment(request: CreatePaymentRequest):
         try:
             await conn.execute(
                 """
-                INSERT INTO payments (payment_id, consult_id, patient_id, amount, status, paypal_transaction_id)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO payments (
+                    payment_id, consult_id, patient_id, amount, status,
+                    paypal_transaction_id, paypal_approve_url
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 """,
-                order_id, request.ConsultID, request.PatientID, str(amount_dec), "PENDING", order_id
+                order_id,
+                request.ConsultID,
+                request.PatientID,
+                str(amount_dec),
+                "PENDING",
+                order_id,
+                approve_url,
             )
         finally:
             await conn.close()
@@ -154,6 +164,37 @@ async def create_payment(request: CreatePaymentRequest):
         "checkout_url": approve_url
     }
 
+
+@app.get("/api/payments/pending/patient/{patient_id}")
+async def list_pending_payments_for_patient(patient_id: str):
+    """PayPal approve links for the patient to complete checkout (not the doctor's browser)."""
+    conn = await get_db_connection()
+    try:
+        rows = await conn.fetch(
+            """
+            SELECT consult_id, amount::text AS amount, paypal_approve_url
+            FROM payments
+            WHERE patient_id = $1
+              AND status = 'PENDING'
+              AND paypal_approve_url IS NOT NULL
+              AND paypal_approve_url <> ''
+            ORDER BY created_at DESC
+            """,
+            patient_id,
+        )
+    finally:
+        await conn.close()
+
+    return {
+        "Data": [
+            {
+                "consult_id": r["consult_id"],
+                "amount": r["amount"],
+                "checkout_url": r["paypal_approve_url"],
+            }
+            for r in rows
+        ]
+    }
 
 
 @app.post("/api/payments/refund")

@@ -9,6 +9,7 @@ import BookConsult from './pages/BookConsult'
 import MyConsults from './pages/MyConsults'
 import Admin from './pages/Admin'
 import Settings from './pages/Settings'
+import { PaymentSuccess, PaymentCancelled } from './pages/PaymentReturn'
 
 export default function App() {
   return (
@@ -29,6 +30,8 @@ export default function App() {
                   <Route path="/consults" element={<MyConsults />} />
                   <Route path="/admin"   element={<Admin />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/payment-success" element={<PaymentSuccess />} />
+                  <Route path="/payment-cancelled" element={<PaymentCancelled />} />
                 </Routes>
               </main>
             </div>

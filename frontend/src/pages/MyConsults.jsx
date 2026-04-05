@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { consultApi, compositeApi, doctorApi, diagnosisApi, patientApi, fmtDT } from '../api'
+import { consultApi, compositeApi, doctorApi, diagnosisApi, patientApi, paymentApi, fmtDT } from '../api'
 import { Card, Badge, Button, Modal, DetailRow, LoadingRow, EmptyState, Input } from '../components/UI'
 import AuthModal from '../components/AuthModal'
 
@@ -20,6 +20,8 @@ export default function MyConsults() {
   const [completeForm, setCompleteForm] = useState({ diagnosis: '', prescription: ''})
   const [doctorsMap, setDoctorsMap] = useState({})
   const [patientsMap, setPatientsMap] = useState({})
+  /** consultId -> { checkout_url, amount } for patient PayPal checkout (not the doctor's session). */
+  const [pendingPayByConsult, setPendingPayByConsult] = useState({})
 
   function load() {
     if (!user) return
@@ -31,6 +33,24 @@ export default function MyConsults() {
       .then(data => setConsults(data.Data || data.data || data || []))
       .catch(() => setConsults([]))
       .finally(() => setLoading(false))
+
+    if (user.role === 'patient') {
+      paymentApi
+        .listPendingForPatient(user.PatientID)
+        .then((data) => {
+          const list = data.Data || data.data || []
+          const map = {}
+          list.forEach((p) => {
+            if (p.consult_id && p.checkout_url) {
+              map[p.consult_id] = { checkout_url: p.checkout_url, amount: p.amount }
+            }
+          })
+          setPendingPayByConsult(map)
+        })
+        .catch(() => setPendingPayByConsult({}))
+    } else {
+      setPendingPayByConsult({})
+    }
 
     // Preload docs dictionary
     doctorApi.getAll()
@@ -107,23 +127,12 @@ export default function MyConsults() {
       return
     }
     const confirmPayment = window.confirm(
-      'Consultation complete. Proceed to charge patient $35.00 via PayPal Sandbox?'
+      'Submit diagnosis, notify the patient and redirect them to PayPal?'
     )
     if (!confirmPayment) return
 
     setActioning(true)
     try {
-      // await compositeApi.consultDoctor({
-      //   PatientID: selected.PatientID || selected.patient_id,
-      //   ConsultID: selected.ConsultID || selected.consult_id,
-      //   diagnosis: completeForm.diagnosis,
-      //   prescription: completeForm.prescription,
-      //   amount: 35.00
-      // })
-      // toast('Payment processed and diagnosis saved!', 'success')
-      // setCompleteModalOpen(false)
-      // setSelected(null)
-      // load()
       const response = await compositeApi.consultDoctor({
         PatientID: selected.PatientID || selected.patient_id,
         ConsultID: selected.ConsultID || selected.consult_id,
@@ -132,21 +141,14 @@ export default function MyConsults() {
         amount: 35.00
       })
 
-      // 2. Check if we need to go to PayPal
       if (response && response.checkout_url) {
-        toast('Redirecting to PayPal Sandbox...', 'info')
-        
-        // This is the magic line that opens the PayPal simulation
-        window.location.href = response.checkout_url; 
-        return; // Stop the rest of the function since we are leaving the page
+        toast('Consult saved. The patient can open PayPal from their account, link sent by email too.', 'success')
+      } else {
+        toast('Consultation completed!', 'success')
       }
-
-      // Fallback for if it was already paid or mocked
-      toast('Consultation completed!', 'success')
       setCompleteModalOpen(false)
       setSelected(null)
       load()
-
     } catch (err) {
       toast('Failed to complete consultation: ' + err.message, 'error')
     } finally {
@@ -206,6 +208,24 @@ export default function MyConsults() {
             <DetailRow label="Zoom URL"    value={selected.ZoomURL || selected.zoom_url
               ? <a href={selected.ZoomURL || selected.zoom_url} target="_blank" rel="noreferrer" style={{ color: '#0ea5e9' }}>{selected.ZoomURL || selected.zoom_url}</a>
               : '—'} />
+            {user.role === 'patient' &&
+              pendingPayByConsult[selected.ConsultID || selected.consult_id] && (
+              <div style={{ marginTop: 14 }}>
+                <Button
+                  variant="success"
+                  disabled={actioning}
+                  onClick={() => {
+                    const p = pendingPayByConsult[selected.ConsultID || selected.consult_id]
+                    if (p?.checkout_url) window.location.href = p.checkout_url
+                  }}
+                >
+                  Pay ${pendingPayByConsult[selected.ConsultID || selected.consult_id]?.amount} with PayPal
+                </Button>
+                <p style={{ fontSize: 12, color: '#6b7280', marginTop: 8, marginBottom: 0 }}>
+                  You will log in to PayPal as the patient to approve this charge.
+                </p>
+              </div>
+            )}
             {(selected.Diagnosis || selected.diagnosis) && <DetailRow label="Diagnosis"    value={selected.Diagnosis || selected.diagnosis} />}
             {(selected.Prescription || selected.prescription) && <DetailRow label="Prescription" value={selected.Prescription || selected.prescription} />}
             {(selected.PaymentID || selected.payment_id) && <DetailRow label="Payment ID"   value={<span style={{ fontFamily: 'monospace', fontSize: 10 }}>{selected.PaymentID || selected.payment_id}</span>} />}
@@ -271,14 +291,25 @@ export default function MyConsults() {
         <EmptyState icon="📋" message={`No ${filter === 'All' ? '' : filter.toLowerCase() + ' '}consultations found.`} />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.map(c => <ConsultCard key={c.ConsultID || c.consult_id} c={c} doctorsMap={doctorsMap} patientsMap={patientsMap} userRole={user.role} onView={() => handleView(c)} onCancel={handleCancel} />)}
+          {filtered.map(c => (
+            <ConsultCard
+              key={c.ConsultID || c.consult_id}
+              c={c}
+              doctorsMap={doctorsMap}
+              patientsMap={patientsMap}
+              userRole={user.role}
+              pendingPay={pendingPayByConsult[c.ConsultID || c.consult_id]}
+              onView={() => handleView(c)}
+              onCancel={handleCancel}
+            />
+          ))}
         </div>
       )}
     </div>
   )
 }
 
-function ConsultCard({ c, doctorsMap, patientsMap, userRole, onView, onCancel }) {
+function ConsultCard({ c, doctorsMap, patientsMap, userRole, pendingPay, onView, onCancel }) {
   const rawStatus = (c.Status || c.status || '').toUpperCase()
   const status = rawStatus === 'BOOKED' ? 'SCHEDULED' : rawStatus
   const zoom = c.ZoomURL || c.zoom_url
@@ -298,10 +329,19 @@ function ConsultCard({ c, doctorsMap, patientsMap, userRole, onView, onCancel })
         )}
         {zoom && <a href={zoom} target="_blank" rel="noreferrer" style={{ color: '#0ea5e9', fontWeight: 500 }}>🎥 Join Zoom</a>}
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
         <Button variant="secondary" size="sm" onClick={onView}>View Details</Button>
         {status === 'SCHEDULED' && (
           <Button variant="danger" size="sm" onClick={() => onCancel(id)}>Cancel</Button>
+        )}
+        {userRole === 'patient' && pendingPay?.checkout_url && (
+          <Button
+            variant="success"
+            size="sm"
+            onClick={() => { window.location.href = pendingPay.checkout_url }}
+          >
+            Pay ${pendingPay.amount} (PayPal)
+          </Button>
         )}
       </div>
     </div>

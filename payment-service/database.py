@@ -42,6 +42,9 @@ async def init_db():
             CREATE INDEX IF NOT EXISTS idx_payments_status
             ON payments (status);
         """)
+        await conn.execute("""
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS paypal_approve_url TEXT;
+        """)
         print("DB ready, payments table initialised.")
     finally:
         await conn.close()
