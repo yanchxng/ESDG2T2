@@ -58,8 +58,6 @@ services:
   make-booking-service:
     build: ./make-booking-service
     container_name: make_booking_service
-    ports:
-      - "4001:4000" 
     environment:
       - PATIENT_SERVICE_URL=${PATIENT_SERVICE_URL}
       - DOCTOR_SERVICE_URL=${DOCTOR_SERVICE_URL}
@@ -73,8 +71,6 @@ services:
   consult-doctor-service:
     build: ./consult-doctor-service
     container_name: consult_doctor_service
-    ports:
-      - "4002:4000"
     environment:
       - PATIENT_SERVICE_URL=${PATIENT_SERVICE_URL}
       - CONSULT_SERVICE_URL=http://consult-service:5000
@@ -89,8 +85,6 @@ services:
   cancel-booking-service:
     build: ./cancel-booking-service
     container_name: cancel_booking_service
-    ports:
-      - "4003:4000"
     environment:
       - PATIENT_SERVICE_URL=${PATIENT_SERVICE_URL}
       - DOCTOR_SERVICE_URL=${DOCTOR_SERVICE_URL}
@@ -108,8 +102,6 @@ services:
   consult-service:
     build: ./consult-service
     container_name: consult_service
-    ports:
-      - "5003:5000"
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - ZOOM_ACCOUNT_ID=${ZOOM_ACCOUNT_ID}
@@ -123,8 +115,6 @@ services:
   diagnosis-service:
     build: ./diagnosis-service
     container_name: diagnosis_service
-    ports:
-      - "5004:5000"
     environment:
       - DATABASE_URL=${DATABASE_URL}
     depends_on:
@@ -135,8 +125,6 @@ services:
   payment-service:
     build: ./payment-service
     container_name: payment_service
-    ports:
-      - "5005:5000"
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
@@ -151,8 +139,6 @@ services:
   notification-service:
     build: ./notification-service
     container_name: notification_service
-    ports:
-      - "5006:5000"
     environment:
       - AMQP_URL=amqp://rabbitmq:5672
       - SENDGRID_API_KEY=${SENDGRID_API_KEY}
