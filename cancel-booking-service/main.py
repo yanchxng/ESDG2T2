@@ -23,7 +23,7 @@ class CancelRequest(BaseModel):
 
 @app.post("/api/booking/cancel")
 async def cancel_booking(request: CancelRequest):
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             # 1. GET Patient Details (for notification)
             patient_res = await client.get(f"{PATIENT_SERVICE_URL}/patient/{request.PatientID}/")

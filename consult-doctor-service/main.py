@@ -25,7 +25,7 @@ class ConsultCompleteRequest(BaseModel):
 
 @app.post("/api/consultation/complete")
 async def complete_consultation(request: ConsultCompleteRequest):
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             # GET Patient
             patient_res = await client.get(f"{PATIENT_SERVICE_URL}/patient/{request.PatientID}/")

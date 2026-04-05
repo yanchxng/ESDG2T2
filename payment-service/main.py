@@ -22,7 +22,7 @@ async def startup():
 PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
 PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET")
 PAYPAL_BASE_URL = os.getenv("PAYPAL_BASE_URL", "https://api-m.sandbox.paypal.com")
-PAYPAL_CURRENCY = os.getenv("PAYPAL_CURRENCY", "USD")
+PAYPAL_CURRENCY = os.getenv("PAYPAL_CURRENCY", "SGD")
 
 
 class CreatePaymentRequest(BaseModel):
@@ -163,6 +163,8 @@ async def create_payment(request: CreatePaymentRequest):
             capture_id,
         )
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         # Avoid leaking PayPal response content; provide generic error.
         raise HTTPException(status_code=500, detail=f"Failed to persist payment record: {str(e)}")
     finally:
