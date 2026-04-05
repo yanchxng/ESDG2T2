@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import Sidebar from './components/Sidebar'
-import ConfigBanner from './components/ConfigBanner'
 import Dashboard from './pages/Dashboard'
 import BookConsult from './pages/BookConsult'
 import MyConsults from './pages/MyConsults'
@@ -17,9 +16,6 @@ export default function App() {
       <AuthProvider>
         <ToastProvider>
           <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-            {/* Config banner at the very top */}
-            <ConfigBanner />
-
             {/* Sidebar + main content */}
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
               <Sidebar />

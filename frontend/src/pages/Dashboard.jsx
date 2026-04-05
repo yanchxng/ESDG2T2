@@ -10,6 +10,7 @@ export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState('login')
   const [consults, setConsults] = useState([])
   const [loading, setLoading] = useState(false)
 
@@ -35,13 +36,13 @@ export default function Dashboard() {
       .finally(() => setAnalyticsLoading(false))
   }, [user])
 
-  const upcoming  = consults.filter(c => (c.Status || c.status) === 'SCHEDULED')
-  const completed = consults.filter(c => (c.Status || c.status) === 'COMPLETED')
+  const upcoming  = consults.filter(c => { const s = (c.Status || c.status || '').toUpperCase(); return s === 'SCHEDULED' || s === 'BOOKED' })
+  const completed = consults.filter(c => (c.Status || c.status || '').toUpperCase() === 'COMPLETED')
 
   if (!user) {
     return (
       <div className="fade-up">
-        <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+        <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} initialMode={authMode} />
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 3 }}>Welcome to MediLink</div>
           <div style={{ fontSize: 13, color: '#6b7280' }}>Your connected healthcare platform</div>
@@ -62,8 +63,8 @@ export default function Dashboard() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <Button onClick={() => setAuthOpen(true)}>Sign In</Button>
-          <Button variant="secondary" onClick={() => setAuthOpen(true)}>Create Account</Button>
+          <Button onClick={() => { setAuthMode('login'); setAuthOpen(true) }}>Sign In</Button>
+          <Button variant="secondary" onClick={() => { setAuthMode('register'); setAuthOpen(true) }}>Create Account</Button>
         </div>
       </div>
     )

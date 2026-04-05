@@ -1,11 +1,15 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Modal, Input, Button } from './UI'
 import { patientApi, doctorApi } from '../api'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 
-export default function AuthModal({ open, onClose }) {
-  const [mode, setMode] = useState('login') // 'login' | 'register'
+export default function AuthModal({ open, onClose, initialMode = 'login' }) {
+  const [mode, setMode] = useState(initialMode) // 'login' | 'register'
+
+  useEffect(() => {
+    if (open) setMode(initialMode)
+  }, [open, initialMode])
   const [role, setRole] = useState('patient') // 'patient' | 'doctor'
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
@@ -68,15 +72,9 @@ export default function AuthModal({ open, onClose }) {
       title={mode === 'login' ? 'Sign In' : 'Create Account'}
       footer={
         mode === 'login' ? (
-          <>
-            <Button variant="secondary" onClick={() => setMode('register')}>Create account</Button>
-            <Button onClick={handleLogin} disabled={loading}>{loading ? 'Signing in…' : 'Sign In'}</Button>
-          </>
+          <Button onClick={handleLogin} disabled={loading}>{loading ? 'Signing in…' : 'Sign In'}</Button>
         ) : (
-          <>
-            <Button variant="secondary" onClick={() => setMode('login')}>Sign in instead</Button>
-            <Button onClick={handleRegister} disabled={loading}>{loading ? 'Creating…' : 'Create Account'}</Button>
-          </>
+          <Button onClick={handleRegister} disabled={loading}>{loading ? 'Creating…' : 'Create Account'}</Button>
         )
       }
     >
@@ -99,6 +97,7 @@ export default function AuthModal({ open, onClose }) {
         <form onSubmit={handleLogin}>
           <Input label="Email address" type="email" placeholder="you@example.com" value={loginForm.email} onChange={e => setLoginForm(f => ({ ...f, email: e.target.value }))} />
           <Input label="Password" type="password" placeholder="••••••••" value={loginForm.password} onChange={e => setLoginForm(f => ({ ...f, password: e.target.value }))} />
+          <button type="submit" style={{ display: 'none' }} />
         </form>
       ) : (
         <form onSubmit={handleRegister}>
