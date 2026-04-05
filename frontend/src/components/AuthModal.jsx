@@ -27,7 +27,7 @@ export default function AuthModal({ open, onClose }) {
       const list = data.Data || data.data || []
       const found = list.find(p => p.Email === loginForm.email)
       if (!found) { toast(`No ${role} found with that email. Please register first.`, 'error'); return }
-      login(found, role)
+      await login(found, role)
       toast(`Welcome back, ${found.Name}!`, 'success')
       onClose()
     } catch (err) {
@@ -51,7 +51,7 @@ export default function AuthModal({ open, onClose }) {
         data = await patientApi.create({ Name: name, Email: email, Password: password, DOB: dob, Address: address })
       }
       p = data.Data || data.data || data
-      login(p, role)
+      await login(p, role)
       toast(`Welcome, ${p.Name}! 🎉`, 'success')
       onClose()
     } catch (err) {
