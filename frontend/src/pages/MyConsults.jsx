@@ -234,7 +234,7 @@ export default function MyConsults() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {FILTERS.map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
-            padding: '6px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 500,
+            padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
             cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.12s',
             background: filter === f ? '#0ea5e9' : '#fff',
             color: filter === f ? '#fff' : '#374151',

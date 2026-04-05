@@ -5,7 +5,6 @@ import aio_pika
 import json
 import os
 from dotenv import load_dotenv
-from fastapi.middleware.cors import CORSMiddleware
 
 # Load environment variables
 load_dotenv()
@@ -16,14 +15,6 @@ CONSULT_SERVICE_URL = os.getenv("CONSULT_SERVICE_URL")
 AMQP_URL = os.getenv("AMQP_URL")
 
 app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Define the expected JSON payload from the UI
 class CancelRequest(BaseModel):

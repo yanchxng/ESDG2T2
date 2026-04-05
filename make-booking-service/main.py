@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 import aio_pika
@@ -16,14 +15,6 @@ CONSULT_SERVICE_URL = os.getenv("CONSULT_SERVICE_URL")
 AMQP_URL = os.getenv("AMQP_URL")
 
 app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Define the expected JSON payload from the UI
 class BookingRequest(BaseModel):
