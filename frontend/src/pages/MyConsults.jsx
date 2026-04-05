@@ -106,19 +106,47 @@ export default function MyConsults() {
       toast('Please enter both diagnosis and prescription.', 'error')
       return
     }
+    const confirmPayment = window.confirm(
+      'Consultation complete. Proceed to charge patient $35.00 via PayPal Sandbox?'
+    )
+    if (!confirmPayment) return
+
     setActioning(true)
     try {
-      await compositeApi.consultDoctor({
+      // await compositeApi.consultDoctor({
+      //   PatientID: selected.PatientID || selected.patient_id,
+      //   ConsultID: selected.ConsultID || selected.consult_id,
+      //   diagnosis: completeForm.diagnosis,
+      //   prescription: completeForm.prescription,
+      //   amount: 35.00
+      // })
+      // toast('Payment processed and diagnosis saved!', 'success')
+      // setCompleteModalOpen(false)
+      // setSelected(null)
+      // load()
+      const response = await compositeApi.consultDoctor({
         PatientID: selected.PatientID || selected.patient_id,
         ConsultID: selected.ConsultID || selected.consult_id,
         diagnosis: completeForm.diagnosis,
         prescription: completeForm.prescription,
         amount: 35.00
       })
-      toast('Consultation completed and info recorded!', 'success')
+
+      // 2. Check if we need to go to PayPal
+      if (response && response.checkout_url) {
+        toast('Redirecting to PayPal Sandbox...', 'info')
+        
+        // This is the magic line that opens the PayPal simulation
+        window.location.href = response.checkout_url; 
+        return; // Stop the rest of the function since we are leaving the page
+      }
+
+      // Fallback for if it was already paid or mocked
+      toast('Consultation completed!', 'success')
       setCompleteModalOpen(false)
       setSelected(null)
       load()
+
     } catch (err) {
       toast('Failed to complete consultation: ' + err.message, 'error')
     } finally {

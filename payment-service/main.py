@@ -22,7 +22,7 @@ async def startup():
 PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
 PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET")
 PAYPAL_BASE_URL = os.getenv("PAYPAL_BASE_URL", "https://api-m.sandbox.paypal.com")
-PAYPAL_CURRENCY = os.getenv("PAYPAL_CURRENCY", "USD")
+PAYPAL_CURRENCY = os.getenv("PAYPAL_CURRENCY", "SGD")
 
 
 class CreatePaymentRequest(BaseModel):
@@ -96,11 +96,13 @@ def _extract_capture_id(paypal_capture_response: dict) -> str | None:
 @app.post("/api/payments", status_code=201)
 async def create_payment(request: CreatePaymentRequest):
     amount_dec = parse_amount(request.amount)
-
     access_token = await paypal_get_access_token()
-    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {access_token}", 
+        "Content-Type": "application/json"
+    }
 
-    # Create and immediately capture (CAPTURE intent).
+    # Step 1: Create the Order ONLY (Don't capture yet!)
     order_payload = {
         "intent": "CAPTURE",
         "purchase_units": [
@@ -108,9 +110,14 @@ async def create_payment(request: CreatePaymentRequest):
                 "amount": {
                     "currency_code": PAYPAL_CURRENCY,
                     "value": str(amount_dec),
-                }
+                },
+                "description": f"Consultation {request.ConsultID}"
             }
         ],
+        "application_context": {
+            "return_url": "http://localhost:5173/payment-success", # Your frontend success page
+            "cancel_url": "http://localhost:5173/payment-cancelled"
+        }
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -121,55 +128,32 @@ async def create_payment(request: CreatePaymentRequest):
         )
         order_res.raise_for_status()
         order_data = order_res.json()
-        order_id = order_data.get("id")
-        if not order_id:
-            raise HTTPException(status_code=502, detail="PayPal order id missing in response")
-
-        capture_res = await client.post(
-            f"{PAYPAL_BASE_URL}/v2/checkout/orders/{order_id}/capture",
-            json={},
-            headers=headers,
-        )
         
-        # In a real flow, the user must approve the order on PayPal before capture.
-        # This will fail with 422 if not approved. We'll catch it and mock the response for testing.
-        if capture_res.status_code == 422:
-            capture_data = {
-                "status": "COMPLETED",
-                "id": f"MOCK_CAPTURE_{order_id}"
-            }
-        else:
-            capture_res.raise_for_status()
-            capture_data = capture_res.json()
+        order_id = order_data.get("id")
+        
+        # Find the 'approve' link to send to the Frontend
+        approve_url = next(link['href'] for link in order_data['links'] if link['rel'] == 'approve')
 
-    paypal_status = (capture_data.get("status") or "").upper()
-    capture_id = _extract_capture_id(capture_data) or order_id
+        # We save it as 'PENDING' in our DB because the user hasn't typed their password yet
+        conn = await get_db_connection()
+        try:
+            await conn.execute(
+                """
+                INSERT INTO payments (payment_id, consult_id, patient_id, amount, status, paypal_transaction_id)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                """,
+                order_id, request.ConsultID, request.PatientID, str(amount_dec), "PENDING", order_id
+            )
+        finally:
+            await conn.close()
 
-    # Persist payment state for downstream refund logic.
-    db_status = "PAID" if paypal_status == "COMPLETED" else "PENDING"
+    # Return the URL so the Frontend can redirect the user
+    return {
+        "PaymentID": order_id, 
+        "status": "CREATED", 
+        "checkout_url": approve_url
+    }
 
-    conn = await get_db_connection()
-    try:
-        await conn.execute(
-            """
-            INSERT INTO payments (payment_id, consult_id, patient_id, amount, status, paypal_transaction_id, refund_id)
-            VALUES ($1, $2, $3, $4, $5, $6, NULL)
-            """,
-            capture_id,
-            request.ConsultID,
-            request.PatientID,
-            str(amount_dec),
-            db_status,
-            capture_id,
-        )
-    except Exception as e:
-        # Avoid leaking PayPal response content; provide generic error.
-        raise HTTPException(status_code=500, detail=f"Failed to persist payment record: {str(e)}")
-    finally:
-        await conn.close()
-
-    # Contract needed by `consult-doctor-service`: it expects { PaymentID, status }.
-    return {"PaymentID": capture_id, "status": db_status, "amount": float(amount_dec)}
 
 
 @app.post("/api/payments/refund")

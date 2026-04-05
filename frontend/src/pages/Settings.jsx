@@ -80,7 +80,7 @@ export default function Settings() {
       }
       
       // Update global auth context so the sidebar reflects changes immediately
-      login({ ...user, ...payload }, user.role)
+      await login({ ...user, ...payload }, user.role)
       toast('Profile updated successfully! 🎉', 'success')
     } catch (err) {
       toast('Failed to update profile: ' + err.message, 'error')
@@ -122,7 +122,7 @@ export default function Settings() {
         await patientApi.update(payload)
       }
       
-      login({ ...user, Password: passwordForm.newPassword }, user.role)
+      await login({ ...user, Password: passwordForm.newPassword }, user.role)
       
       setPasswordForm({ newPassword: '', confirmPassword: '' })
       toast('Password updated successfully! 🎉', 'success')

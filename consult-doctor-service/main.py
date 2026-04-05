@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 import aio_pika
@@ -17,14 +16,6 @@ AMQP_URL = os.getenv("AMQP_URL")
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"], # Restrict this to your frontend URL
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 class ConsultCompleteRequest(BaseModel):
     PatientID: str
     ConsultID: str
@@ -34,7 +25,7 @@ class ConsultCompleteRequest(BaseModel):
 
 @app.post("/api/consultation/complete")
 async def complete_consultation(request: ConsultCompleteRequest):
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             # GET Patient
             patient_res = await client.get(f"{PATIENT_SERVICE_URL}/patient/{request.PatientID}/")
@@ -92,7 +83,8 @@ async def complete_consultation(request: ConsultCompleteRequest):
                 "status": "success",
                 "PaymentID": payment_data.get("PaymentID"),
                 "DiagnosisID": diag_data.get("DiagnosisID"),
-                "paymentStatus": payment_data.get("status")
+                "paymentStatus": payment_data.get("status"),
+                "checkout_url": payment_data.get("checkout_url")
             }
 
         except Exception as e:

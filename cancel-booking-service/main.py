@@ -5,7 +5,6 @@ import aio_pika
 import json
 import os
 from dotenv import load_dotenv
-from fastapi.middleware.cors import CORSMiddleware
 
 # Load environment variables
 load_dotenv()
@@ -17,14 +16,6 @@ AMQP_URL = os.getenv("AMQP_URL")
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Define the expected JSON payload from the UI
 class CancelRequest(BaseModel):
     PatientID: str
@@ -32,7 +23,7 @@ class CancelRequest(BaseModel):
 
 @app.post("/api/booking/cancel")
 async def cancel_booking(request: CancelRequest):
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             # 1. GET Patient Details (for notification)
             patient_res = await client.get(f"{PATIENT_SERVICE_URL}/patient/{request.PatientID}/")

@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uuid
 import os
@@ -404,18 +403,6 @@ graphql_app = GraphQLRouter(schema)
 
 # Mount GraphQL at /graphql endpoint
 app.include_router(graphql_app, prefix="/graphql")
-
-@app.on_event("startup")
-async def startup():
-    await init_db()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @app.on_event("startup")
 async def startup():

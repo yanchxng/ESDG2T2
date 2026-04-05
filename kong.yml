@@ -1,0 +1,168 @@
+_format_version: "3.0"
+
+# Global CORS: browser preflight (OPTIONS) is answered at the gateway; Authorization is allowed for API calls.
+plugins:
+  - name: cors
+    config:
+      origins:
+        - http://localhost:3000
+        - http://127.0.0.1:3000
+        - http://localhost:5173
+        - http://127.0.0.1:5173
+        - http://localhost:4173
+        - http://127.0.0.1:4173
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+        - HEAD
+      headers:
+        - Accept
+        - Accept-Language
+        - Content-Language
+        - Content-Type
+        - Authorization
+      exposed_headers:
+        - X-Auth-Token
+      credentials: false
+      max_age: 3600
+
+# Upstream URLs use Docker service names and container listen ports (not host-mapped ports).
+# Routes strip the path prefix so backends receive /api/... as defined in each FastAPI app.
+
+services:
+  - name: make-booking-service
+    url: http://make-booking-service:4000
+    routes:
+      - name: booking-route
+        paths:
+          - /booking
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 5
+          policy: local
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          run_on_preflight: false
+
+  - name: consult-doctor-service
+    url: http://consult-doctor-service:4000
+    routes:
+      - name: consult-doctor-route
+        paths:
+          - /consult-doctor
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 5
+          policy: local
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          run_on_preflight: false
+
+  - name: cancel-booking-service
+    url: http://cancel-booking-service:4000
+    routes:
+      - name: cancel-booking-route
+        paths:
+          - /cancel-booking
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 5
+          policy: local
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          run_on_preflight: false
+
+  - name: consult-service
+    url: http://consult-service:5000
+    routes:
+      - name: consult-route
+        paths:
+          - /consult
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 10
+          policy: local
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          run_on_preflight: false
+
+  - name: diagnosis-service
+    url: http://diagnosis-service:5000
+    routes:
+      - name: diagnosis-route
+        paths:
+          - /diagnosis
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 10
+          policy: local
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          run_on_preflight: false
+
+  - name: payment-service
+    url: http://payment-service:5000
+    routes:
+      - name: payment-route
+        paths:
+          - /payment
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 5
+          policy: local
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          run_on_preflight: false
+
+  - name: notification-service
+    url: http://notification-service:5000
+    routes:
+      - name: notification-route
+        paths:
+          - /notification
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 10
+          policy: local
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+          run_on_preflight: false
+
+consumers:
+  - username: medilink-web-user
+    jwt_secrets:
+      - key: "http://localhost:8000"
+        secret: "secret"
+        algorithm: "HS256"

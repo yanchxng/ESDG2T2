@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 import aio_pika
@@ -17,14 +16,6 @@ AMQP_URL = os.getenv("AMQP_URL")
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Define the expected JSON payload from the UI
 class BookingRequest(BaseModel):
     PatientID: str
@@ -35,7 +26,7 @@ async def get_booking_capacity(date: str):
     """
     Returns a list of timeslots (e.g., '09:00', '14:30') that are fully booked across ALL doctors.
     """
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             # 1. Get all doctors
             doctors_res = await client.get(f"{DOCTOR_SERVICE_URL}/doctor/")
@@ -79,7 +70,7 @@ async def get_booking_capacity(date: str):
 @app.post("/api/booking")
 async def make_booking(request: BookingRequest):
     # We use httpx.AsyncClient() exactly like we used Axios
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             # Arrows 2 & 3: GET Patient info
             patient_res = await client.get(f"{PATIENT_SERVICE_URL}/patient/{request.PatientID}/")

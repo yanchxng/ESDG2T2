@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import { signJwtHs256 } from '../utils/signJwtHs256'
 
 const AuthContext = createContext(null)
+
+const JWT_ISSUER = 'http://localhost:8000'
+const JWT_SECRET = 'secret'
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -10,25 +14,46 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem('ml_user')
-      if (saved) setUser(JSON.parse(saved))
+      if (saved) {
+        const u = JSON.parse(saved)
+        setUser(u)
+        // apiFetch only reads ml_token; resync if user JSON has token (e.g. legacy session or ml_token cleared)
+        if (u?.token) localStorage.setItem('ml_token', u.token)
+      }
     } catch {
       localStorage.removeItem('ml_user')
+      localStorage.removeItem('ml_token')
     }
     setLoading(false)
   }, [])
 
-  function login(userData, role) {
+  async function login(userData, role) {
     const u = {
       ...userData,
       role: role, // 'patient' or 'doctor'
     }
+    // iss must match jwt_secrets.key in kong.yml so Kong can verify HS256 tokens.
+    // Kong jwt plugin verifies exp; longer TTL in dev avoids silent 401s while coding (prod: 1h).
+    const ttlSec = import.meta.env.DEV ? 60 * 60 * 24 * 7 : 3600
+    const token = await signJwtHs256(
+      {
+        userId: userData.Id,
+        role,
+        iss: JWT_ISSUER,
+        exp: Math.floor(Date.now() / 1000) + ttlSec,
+      },
+      JWT_SECRET,
+    )
+    u.token = token
     setUser(u)
     localStorage.setItem('ml_user', JSON.stringify(u))
+    localStorage.setItem('ml_token', token)
   }
 
   function logout() {
     setUser(null)
     localStorage.removeItem('ml_user')
+    localStorage.removeItem('ml_token')
   }
 
   // Alias patient to user for backward compatibility in some components while they are refactored
