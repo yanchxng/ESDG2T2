@@ -14,7 +14,6 @@ export default function Dashboard() {
   const [consults, setConsults] = useState([])
   const [loading, setLoading] = useState(false)
 
-  // Doctor analytics state
   const [analytics, setAnalytics] = useState(null)
   const [analyticsLoading, setAnalyticsLoading] = useState(false)
 
@@ -82,7 +81,6 @@ export default function Dashboard() {
           <Button onClick={() => navigate('/admin')}>⚙️ Admin Panel</Button>
         </div>
 
-        {/* Doctor Analytics Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
           <StatCard
             label="Total Consults"
@@ -115,7 +113,6 @@ export default function Dashboard() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 24 }}>
-          {/* Consultation Status Distribution - Pie Chart */}
           <Card>
             <CardHeader title="Status Distribution" />
             {analyticsLoading ? <LoadingRow /> : !analytics?.stats ? (
@@ -174,7 +171,6 @@ export default function Dashboard() {
             )}
           </Card>
 
-          {/* Peak Hours - Compact Bar Chart */}
           <Card>
             <CardHeader title="Peak Hours" />
             {analyticsLoading ? <LoadingRow /> : !analytics?.peakHours?.length ? (
@@ -196,7 +192,6 @@ export default function Dashboard() {
             )}
           </Card>
 
-          {/* Top Diagnoses */}
           <Card>
             <CardHeader title="Top Diagnoses" />
             {analyticsLoading ? <LoadingRow /> : !analytics?.topDiagnoses?.length ? (
@@ -223,7 +218,6 @@ export default function Dashboard() {
             )}
           </Card>
 
-          {/* Recent Prescriptions/Diagnoses */}
           <Card>
             <CardHeader title="Recent Patient Care" />
             {analyticsLoading ? <LoadingRow /> : !analytics?.recentDiagnoses?.length ? (
@@ -250,7 +244,6 @@ export default function Dashboard() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 18, marginBottom: 24 }}>
-          {/* Recent Activity Trends - Full Line Chart */}
           <Card>
             <CardHeader title="Consultation Trends (30 Days)" />
             {analyticsLoading ? <LoadingRow /> : !analytics?.trends?.length ? (
@@ -290,7 +283,6 @@ export default function Dashboard() {
             )}
           </Card>
 
-          {/* Monthly Performance Summary */}
           <Card>
             <CardHeader title="Monthly Summary" />
             {analyticsLoading ? <LoadingRow /> : (
@@ -332,7 +324,6 @@ export default function Dashboard() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-          {/* Recent Consultations */}
           <Card>
             <CardHeader title="Recent Consultations" action={<button onClick={() => navigate('/consults')} style={{ background: 'none', border: 'none', color: '#0ea5e9', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>View all →</button>} />
             {analyticsLoading ? <LoadingRow /> : !analytics?.recentConsultations?.length ? (
@@ -342,7 +333,6 @@ export default function Dashboard() {
             ))}
           </Card>
 
-          {/* Doctor Profile */}
           <Card>
             <CardHeader title="Doctor Profile" action={<Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>Edit ⚙️</Button>} />
             <DetailRow label="Name"        value={user.Name} />
@@ -364,7 +354,6 @@ export default function Dashboard() {
         <Button onClick={() => navigate('/book')}>📅 Book Consultation</Button>
       </div>
 
-      {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
         <StatCard label="Upcoming"   value={loading ? '…' : upcoming.length}  sub="scheduled"     icon="📅" iconBg="#e0f2fe" />
         <StatCard label="Cancelled"  value={loading ? '…' : cancelled.length} sub="consultations" icon="❌" iconBg="#fee2e2" />
@@ -373,7 +362,6 @@ export default function Dashboard() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-        {/* Upcoming consults */}
         <Card>
           <CardHeader title="Upcoming Consultations" action={<button onClick={() => navigate('/consults')} style={{ background: 'none', border: 'none', color: '#0ea5e9', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>View all →</button>} />
           {loading ? <LoadingRow /> : upcoming.length === 0 ? (
@@ -383,7 +371,6 @@ export default function Dashboard() {
           ))}
         </Card>
 
-        {/* Profile */}
         <Card>
           <CardHeader title="My Profile" action={<Button variant="ghost" size="sm" onClick={() => navigate('/settings')}>Edit ⚙</Button>} />
           <DetailRow label="Name"        value={user.Name} />

@@ -64,12 +64,12 @@ export default function Settings() {
     try {
       const payload = isDoc ? {
         DoctorID: user.DoctorID,
-        Password: user.Password, // Preserving password on standard update just in case
+        Password: user.Password,
         Name: formData.Name,
         Email: formData.Email
       } : {
         PatientID: user.PatientID,
-        Password: user.Password, // Preserving password on standard update just in case
+        Password: user.Password,
         ...formData
       }
       
@@ -79,7 +79,6 @@ export default function Settings() {
         await patientApi.update(payload)
       }
       
-      // Update global auth context so the sidebar reflects changes immediately
       await login({ ...user, ...payload }, user.role)
       toast('Profile updated successfully! 🎉', 'success')
     } catch (err) {
@@ -136,7 +135,6 @@ export default function Settings() {
   const handleDeleteAccount = async () => {
     setDeleting(true)
     try {
-      // First check if there are any upcoming scheduled consultations
       const consultsReq = isDoc 
         ? await consultApi.getByDoctor(user.DoctorID)
         : await consultApi.getByPatient(user.PatientID)
@@ -165,7 +163,7 @@ export default function Settings() {
         await patientApi.delete(user.PatientID)
       }
       toast('Account deleted successfully.', 'success')
-      logout() // clears local session and re-renders to the signed out state
+      logout()
     } catch (err) {
       toast('Failed to delete account: ' + err.message, 'error')
     } finally {

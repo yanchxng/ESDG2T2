@@ -27,7 +27,6 @@ export default function Sidebar() {
       display: 'flex', flexDirection: 'column',
       position: 'sticky', top: 0, height: '100%', overflowY: 'auto', flexShrink: 0,
     }}>
-      {/* Logo */}
       <div style={{ padding: '18px 16px 14px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #f3f4f6' }}>
         <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#0ea5e9,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, flexShrink: 0 }}>♥</div>
         <div>
@@ -36,11 +35,9 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Nav */}
       <nav style={{ padding: '8px 10px', flex: 1 }}>
         <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 10, padding: '0 4px' }}>Menu</div>
         {navItems.map(item => {
-          // Hide "Book Consultation" for doctors
           if (user?.role === 'doctor' && item.path === '/book') return null;
           return <NavItem key={item.path} item={item} active={pathname === item.path} onClick={() => navigate(item.path)} />
         })}
@@ -57,7 +54,6 @@ export default function Sidebar() {
         ) : null}
       </nav>
 
-      {/* User footer */}
       <div style={{ padding: 14, borderTop: '1px solid #f3f4f6' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: '#f0f4f8' }}>
           <div 

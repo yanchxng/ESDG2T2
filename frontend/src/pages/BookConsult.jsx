@@ -21,7 +21,6 @@ export default function BookConsult() {
   const [fullSlots, setFullSlots] = useState([])
   const [loadingSlots, setLoadingSlots] = useState(false)
 
-  // Min datetime = now
   const nowISO = (() => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16) })()
   const minDate = nowISO.split('T')[0]
   const currentTime = nowISO.split('T')[1]
@@ -35,7 +34,7 @@ export default function BookConsult() {
 
   const generateTimeslots = () => {
     const slots = [];
-    for (let h = 9; h <= 17; h++) { // 9 AM to 5 PM
+    for (let h = 9; h <= 17; h++) {
       for (let m = 0; m < 60; m += 15) {
         if (h === 17 && m > 0) continue; 
         slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
@@ -115,7 +114,6 @@ export default function BookConsult() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 18, marginBottom: 18, maxWidth: 600 }}>
-        {/* Step 1 */}
         <Card>
           <CardHeader title={<><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 7, background: '#e0f2fe', fontSize: 13, marginRight: 6 }}>🕐</span>Step 1 — Choose Timeslot</>} />
           
@@ -162,7 +160,6 @@ export default function BookConsult() {
         </Card>
       </div>
 
-      {/* Step 2 */}
       <Card style={{ maxWidth: 600 }}>
         <CardHeader title={<><span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 7, background: '#e0f2fe', fontSize: 13, marginRight: 6 }}>✅</span>Step 2 — Confirm Booking</>} />
         {canBook ? (

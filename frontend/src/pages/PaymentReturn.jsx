@@ -6,7 +6,7 @@ import { paymentApi } from '../api'
 export function PaymentSuccess() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [status, setStatus] = useState('processing') // processing, success, error
+  const [status, setStatus] = useState('processing')
 
   useEffect(() => {
     const token = searchParams.get('token')

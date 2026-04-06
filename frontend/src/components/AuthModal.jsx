@@ -5,20 +5,17 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 
 export default function AuthModal({ open, onClose, initialMode = 'login' }) {
-  const [mode, setMode] = useState(initialMode) // 'login' | 'register'
+  const [mode, setMode] = useState(initialMode)
 
   useEffect(() => {
     if (open) { setMode(initialMode); setRole('patient') }
   }, [open, initialMode])
-  const [role, setRole] = useState('patient') // 'patient' | 'doctor'
+  const [role, setRole] = useState('patient')
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
   const toast = useToast()
 
-  // Login form state
   const [loginForm, setLoginForm] = useState({ email: '', password: '' })
-
-  // Register form state
   const [regForm, setRegForm] = useState({ name: '', email: '', password: '', dob: '', address: '' })
 
   async function handleLogin(e) {
@@ -78,7 +75,6 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }) {
         )
       }
     >
-      {/* Role toggle — only shown on login */}
       {mode === 'login' && (
         <div style={{ display: 'flex', gap: 4, background: '#f0f4f8', borderRadius: 8, padding: 3, marginBottom: 16 }}>
           {['patient', 'doctor'].map((r) => (

@@ -16,7 +16,6 @@ export default function App() {
       <AuthProvider>
         <ToastProvider>
           <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-            {/* Sidebar + main content */}
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
               <Sidebar />
               <main style={{ flex: 1, overflowY: 'auto', padding: '28px 28px 48px' }}>

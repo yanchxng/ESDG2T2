@@ -25,19 +25,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Define the expected JSON payload from the UI
 class BookingRequest(BaseModel):
     PatientID: str
     timeslot: str
 
 @app.get("/api/booking/capacity")
 async def get_booking_capacity(date: str):
-    """
-    Returns a list of timeslots (e.g., '09:00', '14:30') that are fully booked across ALL doctors.
-    """
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            # 1. Get all doctors
             doctors_res = await client.get(f"{DOCTOR_SERVICE_URL}/doctor/")
             if doctors_res.status_code != 200:
                 return {"full_slots": []}
@@ -48,7 +43,6 @@ async def get_booking_capacity(date: str):
             if total_doctors == 0:
                 return {"full_slots": []}
 
-            # 2. Collect unavailable slots for every doctor on this date
             slot_counts = {}
             for doctor in all_doctors:
                 doc_id = doctor.get("DoctorID")
@@ -58,7 +52,6 @@ async def get_booking_capacity(date: str):
                     unavailable = slots_res.json().get("unavailable_slots", [])
                     for slot_iso in unavailable:
                         try:
-                            # Safely extract time component (HH:MM) from full ISO string
                             normalized = slot_iso.replace(" ", "T")
                             if "T" in normalized:
                                 time_part = normalized.split("T")[1][:5]
@@ -66,7 +59,6 @@ async def get_booking_capacity(date: str):
                         except IndexError:
                             pass
             
-            # 3. Find slots where count matches total doctors (everyone is busy)
             full_slots = [time for time, count in slot_counts.items() if count >= total_doctors]
             
             return {"full_slots": full_slots}
@@ -78,37 +70,30 @@ async def get_booking_capacity(date: str):
 
 @app.post("/api/booking")
 async def make_booking(request: BookingRequest):
-    # We use httpx.AsyncClient() exactly like we used Axios
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            # Arrows 2 & 3: GET Patient info
             patient_res = await client.get(f"{PATIENT_SERVICE_URL}/patient/{request.PatientID}/")
             patient_res.raise_for_status()
             patient_data = patient_res.json().get("Data", {})
 
-            # Fetch all doctors
             doctors_res = await client.get(f"{DOCTOR_SERVICE_URL}/doctor/")
             doctors_res.raise_for_status()
             all_doctors = doctors_res.json().get("Data", [])
-            
+
             if not all_doctors:
                 raise HTTPException(status_code=400, detail="No doctors available in the system.")
-            
-            # Shuffle doctors to pick randomly
+
             random.shuffle(all_doctors)
             
             selected_doctor_id = None
             date_str = request.timeslot.split("T")[0]
-            
-            # Loop through doctors to find one available for the timeslot
+
             for doctor in all_doctors:
                 doc_id = doctor.get("DoctorID")
-                # Check availability in consult service
                 slots_res = await client.get(f"{CONSULT_SERVICE_URL}/api/consults/slots?DoctorID={doc_id}&date={date_str}")
                 if slots_res.status_code == 200:
                     unavailable = slots_res.json().get("unavailable_slots", [])
-                    
-                    # Normalize request timeslot for comparison
+
                     req_time_str = request.timeslot.replace('Z', '').split('+')[0]
                     if len(req_time_str.split(':')) == 2:
                         req_time_str += ':00'
@@ -128,7 +113,6 @@ async def make_booking(request: BookingRequest):
             if not selected_doctor_id:
                 raise HTTPException(status_code=400, detail="No doctors available for this timeslot.")
 
-            # Arrows 6-9: POST to Consult Service
             consult_payload = {
                 "PatientID": request.PatientID,
                 "DoctorID": selected_doctor_id,
@@ -138,7 +122,6 @@ async def make_booking(request: BookingRequest):
             consult_res.raise_for_status()
             consult_data = consult_res.json()
 
-            # Arrow 10: AMQP Notification via RabbitMQ
             connection = await aio_pika.connect_robust(AMQP_URL)
             async with connection:
                 channel = await connection.channel()

@@ -14,7 +14,6 @@ ZOOM_API_BASE  = "https://api.zoom.us/v2"
 
 
 async def _get_access_token() -> str:
-    """Gets a short-lived Zoom OAuth token using account credentials."""
     credentials = f"{ZOOM_CLIENT_ID}:{ZOOM_CLIENT_SECRET}"
     encoded = base64.b64encode(credentials.encode()).decode()
 
@@ -32,10 +31,6 @@ async def _get_access_token() -> str:
 
 
 async def create_meeting(topic: str, start_time: str, duration: int = 30) -> dict:
-    """
-    Creates a scheduled Zoom meeting.
-    Returns Zoom response — use ["id"] and ["join_url"].
-    """
     token = await _get_access_token()
 
     async with httpx.AsyncClient() as client:
@@ -64,10 +59,6 @@ async def create_meeting(topic: str, start_time: str, duration: int = 30) -> dic
 
 
 async def delete_meeting(meeting_id: str) -> None:
-    """
-    Deletes a Zoom meeting by ID.
-    404 treated as success (already deleted).
-    """
     token = await _get_access_token()
 
     async with httpx.AsyncClient() as client:

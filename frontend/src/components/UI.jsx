@@ -1,6 +1,5 @@
 import React from 'react'
 
-// ─── BUTTON ─────────────────────────────────────────────────
 export function Button({ children, variant = 'primary', size = 'md', disabled, onClick, type = 'button', style }) {
   const base = {
     display: 'inline-flex', alignItems: 'center', gap: 6, border: 'none',
@@ -38,7 +37,6 @@ export function Button({ children, variant = 'primary', size = 'md', disabled, o
   )
 }
 
-// ─── INPUT ──────────────────────────────────────────────────
 export function Input({ label, id, readOnly, mono, ...props }) {
   return (
     <div style={{ marginBottom: 14 }}>
@@ -57,7 +55,6 @@ export function Input({ label, id, readOnly, mono, ...props }) {
   )
 }
 
-// ─── SELECT ─────────────────────────────────────────────────
 export function Select({ label, id, children, onChange, value }) {
   return (
     <div style={{ marginBottom: 14 }}>
@@ -73,7 +70,6 @@ export function Select({ label, id, children, onChange, value }) {
   )
 }
 
-// ─── CARD ───────────────────────────────────────────────────
 export function Card({ children, style }) {
   return (
     <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.07), 0 2px 8px rgba(0,0,0,0.05)', padding: 22, ...style }}>
@@ -91,7 +87,6 @@ export function CardHeader({ title, action }) {
   )
 }
 
-// ─── BADGE ──────────────────────────────────────────────────
 const badgeStyles = {
   SCHEDULED: { background: '#e0f2fe', color: '#0284c7' },
   COMPLETED: { background: '#dcfce7', color: '#15803d' },
@@ -110,7 +105,6 @@ export function Badge({ status }) {
   )
 }
 
-// ─── SPINNER ────────────────────────────────────────────────
 export function Spinner({ dark }) {
   return (
     <div style={{
@@ -122,7 +116,6 @@ export function Spinner({ dark }) {
   )
 }
 
-// ─── LOADING ROW ────────────────────────────────────────────
 export function LoadingRow() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 36, color: '#6b7280', gap: 10, fontSize: 13 }}>
@@ -131,7 +124,6 @@ export function LoadingRow() {
   )
 }
 
-// ─── EMPTY STATE ────────────────────────────────────────────
 export function EmptyState({ icon, message }) {
   return (
     <div style={{ textAlign: 'center', padding: '36px 16px', color: '#6b7280' }}>
@@ -141,7 +133,6 @@ export function EmptyState({ icon, message }) {
   )
 }
 
-// ─── MODAL ──────────────────────────────────────────────────
 export function Modal({ open, onClose, title, children, footer }) {
   if (!open) return null
   return (
@@ -167,7 +158,6 @@ export function Modal({ open, onClose, title, children, footer }) {
   )
 }
 
-// ─── DETAIL ROW ─────────────────────────────────────────────
 export function DetailRow({ label, value }) {
   return (
     <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '9px 0', borderBottom: '1px solid #f3f4f6' }}>
@@ -177,7 +167,6 @@ export function DetailRow({ label, value }) {
   )
 }
 
-// ─── STAT CARD ──────────────────────────────────────────────
 export function StatCard({ label, value, sub, icon, iconBg }) {
   return (
     <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.07)', padding: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -191,7 +180,6 @@ export function StatCard({ label, value, sub, icon, iconBg }) {
   )
 }
 
-// ─── TABLE ──────────────────────────────────────────────────
 export function Table({ headers, rows }) {
   return (
     <div style={{ overflowX: 'auto' }}>

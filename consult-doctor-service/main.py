@@ -37,16 +37,13 @@ class ConsultCompleteRequest(BaseModel):
 async def complete_consultation(request: ConsultCompleteRequest):
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            # GET Patient
             patient_res = await client.get(f"{PATIENT_SERVICE_URL}/patient/{request.PatientID}/")
             patient_res.raise_for_status()
             patient_data = patient_res.json().get("Data", {})
 
-            # GET Consult info
             consult_res = await client.get(f"{CONSULT_SERVICE_URL}/api/consults/{request.ConsultID}")
             consult_res.raise_for_status()
 
-            # POST to Diagnosis Service
             diag_payload = {
                 "PatientID": request.PatientID,
                 "ConsultID": request.ConsultID,
@@ -57,7 +54,6 @@ async def complete_consultation(request: ConsultCompleteRequest):
             diag_res.raise_for_status()
             diag_data = diag_res.json()
 
-            # POST to Payment Service
             payment_payload = {
                 "PatientID": request.PatientID,
                 "ConsultID": request.ConsultID,
@@ -67,11 +63,9 @@ async def complete_consultation(request: ConsultCompleteRequest):
             payment_res.raise_for_status()
             payment_data = payment_res.json()
 
-            # UPDATE Consult Status to Completed
             update_res = await client.post(f"{CONSULT_SERVICE_URL}/api/consults/complete?consult_id={request.ConsultID}")
             update_res.raise_for_status()
 
-            # AMQP Notification
             connection = await aio_pika.connect_robust(AMQP_URL)
             async with connection:
                 channel = await connection.channel()

@@ -7,7 +7,6 @@ import json
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 PATIENT_SERVICE_URL = os.getenv("PATIENT_SERVICE_URL")
@@ -25,7 +24,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Define the expected JSON payload from the UI
 class CancelRequest(BaseModel):
     PatientID: str
     ConsultID: str
@@ -34,24 +32,20 @@ class CancelRequest(BaseModel):
 async def cancel_booking(request: CancelRequest):
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            # 1. GET Patient Details (for notification)
             patient_res = await client.get(f"{PATIENT_SERVICE_URL}/patient/{request.PatientID}/")
             patient_res.raise_for_status()
             patient_data = patient_res.json().get("Data", {})
 
-            # 2. GET Consult Details (Need this to know which Doctor)
             consult_res = await client.get(f"{CONSULT_SERVICE_URL}/api/consults/{request.ConsultID}")
             consult_res.raise_for_status()
             consult_data = consult_res.json()
 
             doctor_id = consult_data.get("doctor_id") or consult_data.get("DoctorID")
 
-            # 3. GET Doctor Details (for notification)
             doctor_res = await client.get(f"{DOCTOR_SERVICE_URL}/doctor/{doctor_id}/")
             doctor_res.raise_for_status()
             doctor_data = doctor_res.json().get("Data", {})
 
-            # 4. POST to Consult Service to delete the Zoom meeting and update DB status
             cancel_consult_payload = {
                 "ConsultID": request.ConsultID,
                 "action": "delete_booking"
@@ -59,29 +53,25 @@ async def cancel_booking(request: CancelRequest):
             cancel_res = await client.post(f"{CONSULT_SERVICE_URL}/api/consults/cancel", json=cancel_consult_payload)
             cancel_res.raise_for_status()
 
-            # 5. AMQP Notification (Send cancellation emails to BOTH parties)
             connection = await aio_pika.connect_robust(AMQP_URL)
             async with connection:
                 channel = await connection.channel()
                 queue = await channel.declare_queue("email_notifications", durable=True)
-                
-                # Payload for Patient
+
                 patient_email_payload = {
                     "to": patient_data.get("Email"),
                     "from": "medilink.notifications@gmail.com",
                     "subject": "Cancellation Confirmed",
                     "details": f"Hi {patient_data.get('Name')}, your consult ({request.ConsultID}) has been successfully cancelled."
                 }
-                
-                # Payload for Doctor
+
                 doctor_email_payload = {
                     "to": doctor_data.get("Email"),
                     "from": "medilink.notifications@gmail.com",
                     "subject": "Appointment Cancelled by Patient",
                     "details": f"Dr. {doctor_data.get('Name')}, please note that your appointment ({request.ConsultID}) has been cancelled by the patient."
                 }
-                
-                # Publish both messages to the queue
+
                 await channel.default_exchange.publish(
                     aio_pika.Message(body=json.dumps(patient_email_payload).encode()),
                     routing_key=queue.name,
@@ -91,7 +81,6 @@ async def cancel_booking(request: CancelRequest):
                     routing_key=queue.name,
                 )
 
-            # Return final success status to the UI
             return {
                 "ConsultID": request.ConsultID,
                 "status": "cancelled",

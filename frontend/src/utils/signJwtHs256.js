@@ -1,6 +1,3 @@
-/**
- * HS256 JWT for browser (Web Crypto). Matches Kong consumer jwt_secrets (HS256 + shared secret).
- */
 const enc = new TextEncoder()
 
 function base64UrlEncode(bytes) {
@@ -14,10 +11,6 @@ function base64UrlEncodeJson(obj) {
   return base64UrlEncode(enc.encode(JSON.stringify(obj)))
 }
 
-/**
- * @param {Record<string, unknown>} payload — must include exp (seconds since epoch)
- * @param {string} secret — same as jwt_secrets.secret in kong.yml
- */
 export async function signJwtHs256(payload, secret) {
   const header = { alg: 'HS256', typ: 'JWT' }
   const headerPart = base64UrlEncodeJson(header)

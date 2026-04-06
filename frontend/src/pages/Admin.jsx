@@ -21,7 +21,6 @@ export default function Admin() {
   )
 }
 
-// ─── PATIENTS TAB ────────────────────────────────────────────
 function PatientsTab() {
   const toast = useToast()
   const [patients, setPatients] = useState([])
@@ -136,7 +135,6 @@ function PatientsTab() {
   )
 }
 
-// ─── DOCTORS TAB ─────────────────────────────────────────────
 function DoctorsTab() {
   const toast = useToast()
   const [doctors, setDoctors] = useState([])

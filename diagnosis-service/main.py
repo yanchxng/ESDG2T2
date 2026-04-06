@@ -38,7 +38,6 @@ async def health_check():
 
 @app.post("/api/diagnoses", status_code=201)
 async def create_diagnosis(request: CreateDiagnosisRequest):
-    # Keep medical records out of logs; store only in the service-owned DB table.
     if not request.diagnosis or not request.diagnosis.strip():
         raise HTTPException(status_code=400, detail="diagnosis is required")
     if not request.prescription or not request.prescription.strip():
@@ -62,7 +61,6 @@ async def create_diagnosis(request: CreateDiagnosisRequest):
     finally:
         await conn.close()
 
-    # Contract needed by `consult-doctor-service`: it expects { "DiagnosisID": ... }
     return {"DiagnosisID": diagnosis_id}
 
 @app.get("/api/diagnoses/{consult_id}")

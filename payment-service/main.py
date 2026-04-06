@@ -111,11 +111,10 @@ async def create_payment(request: CreatePaymentRequest):
     amount_dec = parse_amount(request.amount)
     access_token = await paypal_get_access_token()
     headers = {
-        "Authorization": f"Bearer {access_token}", 
+        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json"
     }
 
-    # Step 1: Create the Order ONLY (Don't capture yet!)
     order_payload = {
         "intent": "CAPTURE",
         "purchase_units": [
@@ -143,11 +142,9 @@ async def create_payment(request: CreatePaymentRequest):
         order_data = order_res.json()
         
         order_id = order_data.get("id")
-        
-        # Find the 'approve' link to send to the Frontend
+
         approve_url = next(link['href'] for link in order_data['links'] if link['rel'] == 'approve')
 
-        # We save it as 'PENDING' in our DB because the user hasn't typed their password yet
         conn = await get_db_connection()
         try:
             await conn.execute(
@@ -169,7 +166,6 @@ async def create_payment(request: CreatePaymentRequest):
         finally:
             await conn.close()
 
-    # Return the URL so the Frontend can redirect the user
     return {
         "PaymentID": order_id, 
         "status": "CREATED", 
@@ -179,7 +175,6 @@ async def create_payment(request: CreatePaymentRequest):
 
 @app.get("/api/payments/pending/patient/{patient_id}")
 async def list_pending_payments_for_patient(patient_id: str):
-    """PayPal approve links for the patient to complete checkout (not the doctor's browser)."""
     conn = await get_db_connection()
     try:
         rows = await conn.fetch(
@@ -235,7 +230,6 @@ async def capture_payment(payment_id: str):
 
             if capture_res.status_code not in (200, 201, 202):
                 print(f"PayPal Capture Error: {capture_res.text}")
-                # sometimes already closed/captured returns 422 Unprocessable Entity
                 if capture_res.status_code == 422 and "ORDER_ALREADY_CAPTURED" in capture_res.text:
                     pass
                 else:
@@ -260,7 +254,6 @@ async def capture_payment(payment_id: str):
         if updated_row:
             amount_paid = float(payment_row["amount"])
 
-            # Notification logic
             try:
                 async with httpx.AsyncClient(timeout=10.0) as client:
                     patient_res = await client.get(f"{PATIENT_SERVICE_URL}/patient/{payment_row['patient_id']}/")
@@ -348,6 +341,5 @@ async def refund_payment(request: RefundPaymentRequest):
     finally:
         await conn.close()
 
-    # Cancellation orchestrator just needs HTTP 200; return helpful fields anyway.
     return {"PaymentID": request.PaymentID, "status": refund_status, "refundID": refund_id}
 

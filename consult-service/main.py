@@ -25,7 +25,6 @@ async def _fetch_diagnosis_by_consult(consult_id: str, client: httpx.AsyncClient
     except (httpx.HTTPStatusError, httpx.RequestError):
         return None
 
-# GraphQL Types
 @strawberry.type
 class Consultation:
     consult_id: str
@@ -88,34 +87,26 @@ class MonthlyComparison:
 class Query:
     @strawberry.field
     async def get_consultation_stats(self, doctor_id: str) -> ConsultationStats:
-        # Authorization check - only allow doctors to access their own stats
-        # In a real app, you'd get this from JWT token
-        # For now, we'll assume the doctor_id is validated at the API gateway level
-
         conn = await get_db_connection()
         try:
-            # Get total consultations
             total_row = await conn.fetchrow(
                 "SELECT COUNT(*) as count FROM consultations WHERE doctor_id = $1",
                 doctor_id
             )
             total_consultations = total_row["count"]
 
-            # Get completed consultations
             completed_row = await conn.fetchrow(
                 "SELECT COUNT(*) as count FROM consultations WHERE doctor_id = $1 AND status = 'completed'",
                 doctor_id
             )
             completed_consultations = completed_row["count"]
 
-            # Get upcoming consultations (booked but not completed or cancelled)
             upcoming_row = await conn.fetchrow(
                 "SELECT COUNT(*) as count FROM consultations WHERE doctor_id = $1 AND status = 'booked' AND timeslot > NOW()",
                 doctor_id
             )
             upcoming_consultations = upcoming_row["count"]
 
-            # Get cancelled consultations
             cancelled_row = await conn.fetchrow(
                 "SELECT COUNT(*) as count FROM consultations WHERE doctor_id = $1 AND status = 'cancelled'",
                 doctor_id
@@ -271,7 +262,6 @@ class Query:
     async def get_monthly_comparison(self, doctor_id: str) -> MonthlyComparison:
         conn = await get_db_connection()
         try:
-            # Current month consultations
             current_month_row = await conn.fetchrow(
                 """
                 SELECT COUNT(*) as count
@@ -283,7 +273,6 @@ class Query:
             )
             current_month = current_month_row["count"]
 
-            # Previous month consultations
             previous_month_row = await conn.fetchrow(
                 """
                 SELECT COUNT(*) as count
@@ -295,7 +284,6 @@ class Query:
             )
             previous_month = previous_month_row["count"]
 
-            # Calculate growth percentage
             if previous_month == 0:
                 growth_percentage = 100.0 if current_month > 0 else 0.0
             else:
@@ -398,11 +386,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create GraphQL schema and router
 schema = strawberry.Schema(Query)
 graphql_app = GraphQLRouter(schema)
 
-# Mount GraphQL at /graphql endpoint
 app.include_router(graphql_app, prefix="/graphql")
 
 @app.on_event("startup")
@@ -422,15 +408,8 @@ class CancelConsultRequest(BaseModel):
 async def health_check():
     return {"status": "ok", "service": "consult-service"}
 
-# Called by the UI when patient is BROWSING timeslots.
-# Returns slots that are booked OR temporarily reserved — UI greys these out.
 @app.get("/api/consults/slots")
 async def get_unavailable_slots(DoctorID: str, date: str):
-    """
-    Query params:
-        DoctorID — e.g. "D001"
-        date     — e.g. "2025-06-15"
-    """
     conn = await get_db_connection()
     now  = datetime.now(timezone.utc)
     from datetime import datetime as dt
@@ -478,11 +457,8 @@ async def get_consults_by_doctor(doctor_id: str):
     finally:
         await conn.close()
 
-# Called by Consult Doctor composite (Image 1, step 4)
-# and Cancel Consult composite (Image 2) to fetch consult details.
 @app.get("/api/consults/{consult_id}")
 async def get_consult(consult_id: str):
-    """Returns {ConsultID, timeslot, url} and full record."""
     conn = await get_db_connection()
     try:
         row = await conn.fetchrow(
@@ -494,18 +470,8 @@ async def get_consult(consult_id: str):
     finally:
         await conn.close()
 
-# Called by Make Booking composite (Image 3, step 6).
-# Creates Zoom meeting → saves permanent booking.
-# Returns {ConsultID, timeslot, url} back to Make Booking composite.
 @app.post("/api/consults", status_code=201)
 async def create_consult(request: CreateConsultRequest):
-    """
-    Image 3 steps 6–8:
-        6. Receives {PatientID, DoctorID, timeslot} from Make Booking
-        7. POST {timeslot} to Zoom API
-        8. Zoom returns {url}
-        9. Returns {ConsultID, timeslot, url} to Make Booking
-    """
     conn = await get_db_connection()
     now  = datetime.now(timezone.utc)
     try:
@@ -554,17 +520,8 @@ async def create_consult(request: CreateConsultRequest):
     finally:
         await conn.close()
 
-# Called by Cancel Consult composite (Image 2, step 4)
-# Deletes the Zoom meeting and marks the slot as cancelled
 @app.post("/api/consults/cancel")
 async def cancel_consult(request: CancelConsultRequest):
-    """
-    Image 2 steps 4–7:
-        4. Receives {ConsultID, action: delete_booking} from Cancel Consult
-        5. Calls Zoom API to delete the meeting
-        6. Zoom returns {status}
-        7. Returns {ConsultID, cancelled} to Cancel Consult
-    """
     if request.action != "delete_booking":
         raise HTTPException(status_code=400, detail="Invalid action. Expected 'delete_booking'.")
 
@@ -596,7 +553,6 @@ async def cancel_consult(request: CancelConsultRequest):
     finally:
         await conn.close()
 
-# Called when a consultation status needs to be marked as completed.
 @app.post("/api/consults/complete")
 async def complete_consult(consult_id: str):
     conn = await get_db_connection()

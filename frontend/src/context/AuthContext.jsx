@@ -10,14 +10,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Restore session from localStorage on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem('ml_user')
       if (saved) {
         const u = JSON.parse(saved)
         setUser(u)
-        // apiFetch only reads ml_token; resync if user JSON has token (e.g. legacy session or ml_token cleared)
         if (u?.token) localStorage.setItem('ml_token', u.token)
       }
     } catch {
@@ -30,10 +28,8 @@ export function AuthProvider({ children }) {
   async function login(userData, role) {
     const u = {
       ...userData,
-      role: role, // 'patient' or 'doctor'
+      role: role,
     }
-    // iss must match jwt_secrets.key in kong.yml so Kong can verify HS256 tokens.
-    // Kong jwt plugin verifies exp; longer TTL in dev avoids silent 401s while coding (prod: 1h).
     const ttlSec = import.meta.env.DEV ? 60 * 60 * 24 * 7 : 3600
     const token = await signJwtHs256(
       {
@@ -56,7 +52,6 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('ml_token')
   }
 
-  // Alias patient to user for backward compatibility in some components while they are refactored
   return (
     <AuthContext.Provider value={{ user, patient: user?.role === 'patient' ? user : null, doctor: user?.role === 'doctor' ? user : null, login, logout, loading }}>
       {children}

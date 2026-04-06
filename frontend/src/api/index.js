@@ -1,6 +1,3 @@
-// ─── SERVICE URLs ───────────────────────────────────────────
-// Patient & Doctor: OutSystems. Kong-backed APIs: dev uses Vite proxy /kong → Kong (same-origin, no CORS).
-// Production: set VITE_KONG_BASE at build time (e.g. https://api.example.com) or defaults to http://localhost:8000
 const kongBase =
   (import.meta.env.VITE_KONG_BASE &&
     String(import.meta.env.VITE_KONG_BASE).replace(/\/$/, "")) ||
@@ -19,7 +16,6 @@ export const CONFIG = {
   paymentBase: `${kongBase}/payment`,
 };
 
-/** Kong expects Authorization: Bearer <jwt>. Prefer ml_token; fall back to token embedded in ml_user. */
 function getStoredJwt() {
   let raw = localStorage.getItem("ml_token");
   if (!raw) {
@@ -36,7 +32,6 @@ function getStoredJwt() {
   return raw;
 }
 
-// ─── GENERIC FETCH WRAPPER ──────────────────────────────────
 export async function apiFetch(url, options = {}) {
   const token = getStoredJwt();
   const headers = {
@@ -68,7 +63,6 @@ export async function apiFetch(url, options = {}) {
   return data;
 }
 
-// ─── PATIENT SERVICE ────────────────────────────────────────
 export const patientApi = {
   getAll: () => apiFetch(`${CONFIG.patientBase}/patient/`),
   getById: (id) => apiFetch(`${CONFIG.patientBase}/patient/${id}/`),
@@ -86,7 +80,6 @@ export const patientApi = {
     apiFetch(`${CONFIG.patientBase}/patient/${id}/`, { method: "DELETE" }),
 };
 
-// ─── DOCTOR SERVICE ─────────────────────────────────────────
 export const doctorApi = {
   getAll: () => apiFetch(`${CONFIG.doctorBase}/doctor/`),
   getById: (id) => apiFetch(`${CONFIG.doctorBase}/doctor/${id}/`),
@@ -104,7 +97,6 @@ export const doctorApi = {
     apiFetch(`${CONFIG.doctorBase}/doctor/${id}/`, { method: "DELETE" }),
 };
 
-// ─── CONSULT SERVICE ────────────────────────────────────────
 export const consultApi = {
   getByPatient: (patientId) =>
     apiFetch(`${CONFIG.consultBase}/api/consults/patient/${patientId}`),
@@ -113,7 +105,6 @@ export const consultApi = {
   getById: (id) => apiFetch(`${CONFIG.consultBase}/api/consults/${id}`),
 };
 
-// ─── GRAPHQL API ────────────────────────────────────────────
 export async function graphqlFetch(query, variables = {}) {
   const token = localStorage.getItem("ml_token");
   const headers = { "Content-Type": "application/json" };
@@ -191,7 +182,6 @@ export const analyticsApi = {
     })),
 };
 
-// ─── COMPOSITE SERVICES ─────────────────────────────────────
 export const compositeApi = {
   getCapacity: (date) =>
     apiFetch(`${CONFIG.bookingBase}/api/booking/capacity?date=${date}`),
@@ -212,7 +202,6 @@ export const compositeApi = {
     }),
 };
 
-// ─── PAYMENT SERVICE ────────────────────────────────────────
 export const paymentApi = {
   listPendingForPatient: (patientId) =>
     apiFetch(`${CONFIG.paymentBase}/api/payments/pending/patient/${patientId}`),
@@ -221,10 +210,8 @@ export const paymentApi = {
       method: "POST",
     }),
 };
-// ─── HELPERS ────────────────────────────────────────────────
 export function fmtDate(d) {
   if (!d) return "—";
-  // If it's a simple YYYY-MM-DD string, don't append timezone offset to prevent Invalid Date errors
   if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
     return new Date(d).toLocaleDateString("en-SG", {
       day: "2-digit",
@@ -232,7 +219,6 @@ export function fmtDate(d) {
       year: "numeric",
     });
   }
-  // Strip backend timezone artifacts and force it to be interpreted as Singapore Time
   const raw = d.replace(/(Z|[+-]\d{2}:\d{2})$/, "") + "+08:00";
   return new Date(raw).toLocaleDateString("en-SG", {
     day: "2-digit",
@@ -244,7 +230,6 @@ export function fmtDate(d) {
 
 export function fmtDT(d) {
   if (!d) return "—";
-  // Strip backend timezone artifacts and force it to be interpreted as Singapore Time
   const raw = d.replace(/(Z|[+-]\d{2}:\d{2})$/, "") + "+08:00";
   return new Date(raw).toLocaleString("en-SG", {
     day: "2-digit",

@@ -14,7 +14,7 @@ export default function MyConsults() {
   const [consults, setConsults] = useState([])
   const [loading, setLoading] = useState(false)
   const [filter, setFilter] = useState('All')
-  const [selected, setSelected] = useState(null) // consult for detail modal
+  const [selected, setSelected] = useState(null)
   const [actioning, setActioning] = useState(false)
   const [completeModalOpen, setCompleteModalOpen] = useState(false)
   const [completeForm, setCompleteForm] = useState({ diagnosis: '', prescription: ''})
@@ -52,7 +52,6 @@ export default function MyConsults() {
       setPendingPayByConsult({})
     }
 
-    // Preload docs dictionary
     doctorApi.getAll()
       .then(res => {
         const docs = res.Data || res.data || res || []
@@ -64,7 +63,6 @@ export default function MyConsults() {
       })
       .catch(() => {})
 
-    // Preload patients dictionary
     patientApi.getAll()
       .then(res => {
         const patients = res.Data || res.data || res || []
@@ -86,14 +84,12 @@ export default function MyConsults() {
   })
 
   async function handleView(c) {
-    // If it's a completed consultation, gracefully fetch its diagnosis details
     const status = (c.Status || c.status || '').toUpperCase()
     if (status === 'COMPLETED') {
       try {
         const diagData = await diagnosisApi.getByConsult(c.ConsultID || c.consult_id)
         setSelected({ ...c, diagnosis: diagData.diagnosis, prescription: diagData.prescription })
       } catch (err) {
-        // Just show what we safely have
         setSelected(c)
       }
     } else {
@@ -111,7 +107,6 @@ export default function MyConsults() {
       load()
     } catch (err) {
       toast('Cancel service not reachable: ' + err.message, 'error')
-      // Optimistic update
       setConsults(prev => prev.map(c =>
         (c.ConsultID || c.consult_id) === consultId ? { ...c, Status: 'CANCELLED', status: 'CANCELLED' } : c
       ))
@@ -175,7 +170,6 @@ export default function MyConsults() {
 
   return (
     <div className="fade-up">
-      {/* Detail Modal */}
       <Modal
         open={!!selected && !completeModalOpen}
         onClose={() => setSelected(null)}
@@ -233,7 +227,6 @@ export default function MyConsults() {
         )}
       </Modal>
 
-      {/* Complete Consult Modal (Doctor Only) */}
       <Modal
         open={completeModalOpen}
         onClose={() => setCompleteModalOpen(false)}
@@ -273,7 +266,6 @@ export default function MyConsults() {
         <Button variant="secondary" size="sm" onClick={load}>↻ Refresh</Button>
       </div>
 
-      {/* Filter tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {FILTERS.map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
@@ -286,7 +278,6 @@ export default function MyConsults() {
         ))}
       </div>
 
-      {/* Consult list */}
       {loading ? <LoadingRow /> : filtered.length === 0 ? (
         <EmptyState icon="📋" message={`No ${filter === 'All' ? '' : filter.toLowerCase() + ' '}consultations found.`} />
       ) : (

@@ -73,7 +73,6 @@ def send_email(notification: EmailNotification):
 
 
 async def process_message(message: aio_pika.IncomingMessage):
-    # Validate message schema — bad messages are discarded (not requeued)
     try:
         data = json.loads(message.body.decode())
         notification = EmailNotification.model_validate(data)
@@ -82,7 +81,6 @@ async def process_message(message: aio_pika.IncomingMessage):
         await message.nack(requeue=False)
         return
 
-    # Send email — transient failures are requeued for retry
     try:
         log.info(f"Processing email → to={notification.to}, subject={notification.subject}")
         send_email(notification)
