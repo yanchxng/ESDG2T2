@@ -8,7 +8,7 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }) {
   const [mode, setMode] = useState(initialMode) // 'login' | 'register'
 
   useEffect(() => {
-    if (open) setMode(initialMode)
+    if (open) { setMode(initialMode); setRole('patient') }
   }, [open, initialMode])
   const [role, setRole] = useState('patient') // 'patient' | 'doctor'
   const [loading, setLoading] = useState(false)
@@ -78,20 +78,22 @@ export default function AuthModal({ open, onClose, initialMode = 'login' }) {
         )
       }
     >
-      {/* Role toggle */}
-      <div style={{ display: 'flex', gap: 4, background: '#f0f4f8', borderRadius: 8, padding: 3, marginBottom: 16 }}>
-        {['patient', 'doctor'].map((r) => (
-          <button key={r} onClick={() => setRole(r)} type="button" style={{
-            flex: 1, padding: '8px', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500,
-            cursor: 'pointer', fontFamily: 'Inter, sans-serif', textTransform: 'capitalize',
-            color: role === r ? '#111827' : '#6b7280',
-            background: role === r ? '#fff' : 'transparent',
-            boxShadow: role === r ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-          }}>
-            {r === 'patient' ? '👤 Patient' : '🏥 Doctor'}
-          </button>
-        ))}
-      </div>
+      {/* Role toggle — only shown on login */}
+      {mode === 'login' && (
+        <div style={{ display: 'flex', gap: 4, background: '#f0f4f8', borderRadius: 8, padding: 3, marginBottom: 16 }}>
+          {['patient', 'doctor'].map((r) => (
+            <button key={r} onClick={() => setRole(r)} type="button" style={{
+              flex: 1, padding: '8px', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500,
+              cursor: 'pointer', fontFamily: 'Inter, sans-serif', textTransform: 'capitalize',
+              color: role === r ? '#111827' : '#6b7280',
+              background: role === r ? '#fff' : 'transparent',
+              boxShadow: role === r ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+            }}>
+              {r === 'patient' ? '👤 Patient' : '🏥 Doctor'}
+            </button>
+          ))}
+        </div>
+      )}
 
       {mode === 'login' ? (
         <form onSubmit={handleLogin}>

@@ -76,7 +76,7 @@ export default function Dashboard() {
       <div className="fade-up">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 3 }}>Welcome Doctor, {user.Name}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 3 }}>Welcome, {user.Name}</div>
             <div style={{ fontSize: 13, color: '#6b7280' }}>Manage your consultations and patients.</div>
           </div>
           <Button onClick={() => navigate('/admin')}>⚙️ Admin Panel</Button>
