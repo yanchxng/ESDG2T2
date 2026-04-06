@@ -36,8 +36,9 @@ export default function Dashboard() {
       .finally(() => setAnalyticsLoading(false))
   }, [user])
 
-  const upcoming  = consults.filter(c => { const s = (c.Status || c.status || '').toUpperCase(); return s === 'SCHEDULED' || s === 'BOOKED' })
-  const completed = consults.filter(c => (c.Status || c.status || '').toUpperCase() === 'COMPLETED')
+  const upcoming   = consults.filter(c => { const s = (c.Status || c.status || '').toUpperCase(); return s === 'SCHEDULED' || s === 'BOOKED' })
+  const completed  = consults.filter(c => (c.Status || c.status || '').toUpperCase() === 'COMPLETED')
+  const cancelled  = consults.filter(c => (c.Status || c.status || '').toUpperCase() === 'CANCELLED')
 
   if (!user) {
     return (
@@ -364,10 +365,11 @@ export default function Dashboard() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
-        <StatCard label="Upcoming"  value={loading ? '…' : upcoming.length}  sub="consultations" icon="📈" iconBg="#e0f2fe" />
-        <StatCard label="Completed" value={loading ? '…' : completed.length} sub="consultations" icon="✅" iconBg="#f0fdf4" />
-        <StatCard label="Total"     value={loading ? '…' : consults.length}  sub="all time"      icon="💊" iconBg="#faf5ff" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+        <StatCard label="Upcoming"   value={loading ? '…' : upcoming.length}  sub="scheduled"     icon="📅" iconBg="#e0f2fe" />
+        <StatCard label="Cancelled"  value={loading ? '…' : cancelled.length} sub="consultations" icon="❌" iconBg="#fee2e2" />
+        <StatCard label="Completed"  value={loading ? '…' : completed.length} sub="consultations" icon="✅" iconBg="#f0fdf4" />
+        <StatCard label="Total"      value={loading ? '…' : consults.length}  sub="all time"      icon="💊" iconBg="#faf5ff" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
